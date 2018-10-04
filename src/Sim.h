@@ -8,17 +8,27 @@
  * Created by Axel Berglund and Chayanon Wichitrnithed
  */
 
-typedef struct Gen Gen;
-typedef struct Exit Exit;
-typedef struct Station Station;
-typedef struct Fork Fork;
 
-void addGen(double avgArrivalTime, int outputID);
+/* Initialize the array containing the components
+ */
+void initialize(int numComponents);
 
-void addExit();
+/* Add a Generator component
+ */
+void addGen(int id, double avgArrivalTime, int outputID);
 
-void addStation(double avgServeTime, int outputID);
+/* Add an Exit component
+ */
+void addExit(int id);
 
-void addFork(double* probabilities, int* outputIDs);
+/* Add a Queueing Station component
+ */
+void addStation(int id, double avgServeTime, int outputID);
 
+/* Add a Fork component
+ */
+void addFork(int id, double* probabilities, int* outputIDs);
+
+/* Run the simulation, modifying state
+ */
 void runSim();
