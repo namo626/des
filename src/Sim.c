@@ -1,6 +1,11 @@
+#include <stdlib.h>
+#include <stdio.h>
 #include "Sim.h"
 #include "Queue.h"
 #include "PrioQ.h"
+
+#define TRUE 0
+#define FALSE 1
 
 // COmponent is a general type for all components
 typedef struct Component {
@@ -21,8 +26,8 @@ Component* createComp(char* t, void* c) {
 typedef struct Network {
   int num_components; // should be fixed
   Component** components;
-  List* exited;  // customers who have exited
-  List* entered; // customers who have entered
+  int exited;  // customers who have exited
+  int entered; // customers who have entered
 } Network;
 
 
@@ -41,25 +46,28 @@ Customer* mkCustomer() {
 /* Global state variables and modifying functions */
 
 // global network
-Network* NETWORK = malloc(sizeof(Network));
+Network* NETWORK = NULL;
 // global schedule
-PrioQ FEL = PQ_create();
+PrioQ* FES = NULL;
 // global clock
 double NOW = 0.0;
 
 // initialize the component array of the network
 void initialize(int amount) {
-  Component** comps = malloc(amount * sizeof(comp*));
+  Component** comps = malloc(amount * sizeof(Component*));
+  NETWORK = malloc(sizeof(Network));
   NETWORK->num_components = amount;
-  NETWORK->comps = comps;
-  NETWORK->entered = mkList();
-  NETWORK->exited = mkList();
+  NETWORK->components = comps;
+  NETWORK->entered = 0;
+  NETWORK->exited = 0;
 
+  // create the schedule
+  FES = PQ_create();
 }
 
 // add a component to the network
-void addToNetwork(int id, Comp* comp) {
-  NETWORK->comps[id] = comps;
+void addToNetwork(int id, Component* comp) {
+  NETWORK->components[id] = comp;
 }
 
 Component* getFromNetwork(int id) {
@@ -68,12 +76,12 @@ Component* getFromNetwork(int id) {
 
 // add an exiting customer
 void recordExit(Customer* customer) {
-  cons(customer, NETWORK->exited);
+  NETWORK->exited++;
 }
 
 // add an entering customer
 void recordEnter(Customer* customer) {
-  cons(customer, NETWORK->entered);
+  NETWORK->entered++;
 }
 
 
@@ -86,15 +94,14 @@ typedef struct Gen {
 } Gen;
 
 // create and add a generator component to the global network
-void addGen(int id; double p, int outputID) {
+void addGen(int id, double p, int outputID) {
   Gen* gen = malloc(sizeof(Gen));
 
   if (gen == NULL) {
     printf("Not enough memory");
-    return NULL;
   }
 
-  gen->connections = outputID;
+  gen->outport = outputID;
   gen->avgArrivalTime = p;
 
   Component* comp = createComp("G", gen);
@@ -125,7 +132,6 @@ void addStation(int id, double param, int outputID) {
 
   if (station == NULL) {
     printf("Not enough memory");
-    return NULL;
   }
 
   station->avgWaitTime = param;
@@ -143,7 +149,7 @@ double getWaitTime(Station* station) {
 }
 
 int isEmpty(Station* station) {
-  return isEmptyQ(station);
+  return isEmptyQ(station->queue);
 }
 
 void addToLine(Station* station, Customer* customer) {
@@ -216,6 +222,7 @@ void handleArrival(Arrival* arrival) {
 
   // component that the arrival is sent to
   Component* dest = getFromNetwork(arrival->destID);
+  Customer* customer = arrival->customer;
 
   // dispatching on component type and handle accordingly
   if (dest->type == "E") {
@@ -225,7 +232,7 @@ void handleArrival(Arrival* arrival) {
     Station* station = dest->content;
     if (isEmpty(station) == TRUE) {
       double waitTime = getWaitTime(station);
-      schedule(mkDeparture(NOW + waitTime, station, customer));
+      schedule(mkDeparture(NOW + waitTime, arrival->destID, customer));
     }
     addToLine(station, customer);
   }
@@ -248,7 +255,7 @@ void handleDeparture(Departure* departure) {
     // if station is still not empty, process the next customer
     if (isEmpty(station) == FALSE) {
       double waitTime = getWaitTime(station);
-      schedule(mkDeparture(NOW + waitTime, station, customer));
+      schedule(mkDeparture(NOW + waitTime, departure->locationID, customer));
     }
   }
 }
@@ -269,24 +276,24 @@ void handleEvent(Event* event) {
 /* Running the network simulation */
 
 void runSim(double time) {
-  // run the main generator of the network to generate all the arrivals
-  Gen* gen = findGen();
-  double genTime = 0;
-  double arrivalTime;
-  while (genTime < time) {
-    arrivalTime = getAvgTime(gen);
-    Event* ev = mkArrival(genTime + arrivalTime);
-    // add event to FEL
-    schedule(ev);
-    genTime = genTime + arrivalTime;
-  }
+  /* // run the main generator of the network to generate all the arrivals */
+  /* Gen* gen = findGen(); */
+  /* double genTime = 0; */
+  /* double arrivalTime; */
+  /* while (genTime < time) { */
+  /*   arrivalTime = getAvgTime(gen); */
+  /*   Event* ev = mkArrival(genTime + arrivalTime); */
+  /*   // add event to FEL */
+  /*   schedule(ev); */
+  /*   genTime = genTime + arrivalTime; */
+  /* } */
 
-  // main event processing loop for events from FEL
-  while (NOW < time) {
-    // remove event from FEL
-    Event* event = nextEvent();
-    NOW = getTimeStamp(event);
-    // handleEvent may schedule a new event, for example
-    handleEvent(event);
-  }
+  /* // main event processing loop for events from FEL */
+  /* while (NOW < time) { */
+  /*   // remove event from FEL */
+  /*   Event* event = nextEvent(); */
+  /*   NOW = getTimeStamp(event); */
+  /*   // handleEvent may schedule a new event, for example */
+  /*   handleEvent(event); */
+  /* } */
 }

@@ -61,7 +61,7 @@ int enqueue(Queue* Q, void* E) {
 void* dequeue(Queue* Q) {
   if (isEmptyQ(Q) == TRUE) {
     printf("Queue is empty\n");
-    return -1;
+    return NULL;
   }
   QElem* temp = Q->first;
   Q->first = Q->first->nextElem;
