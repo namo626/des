@@ -3,10 +3,10 @@
 #include "PrioQ.h"
 
 // COmponent is a general type for all components
-struct Component {
+typedef struct Component {
   char* type;
   void* content;
-};
+} Component;
 
 // Make a general component to hold a specific component
 Component* createComp(char* t, void* c) {
@@ -43,7 +43,7 @@ Customer* mkCustomer() {
 // global network
 Network* NETWORK = malloc(sizeof(Network));
 // global schedule
-PrioQ FEL = mkPrioQ();
+PrioQ FEL = PQ_create();
 // global clock
 double NOW = 0.0;
 
@@ -80,10 +80,10 @@ void recordEnter(Customer* customer) {
 /***************************************************************/
 /* Generator component and its functions */
 
-struct Gen {
+typedef struct Gen {
   int outport; // array of IDs of the connected components
   double avgArrivalTime; // parameter: average arrival time
-};
+} Gen;
 
 // create and add a generator component to the global network
 void addGen(int id; double p, int outputID) {
@@ -166,11 +166,11 @@ typedef struct Event {
 } Event;
 
 void schedule(Event* event) {
-  prioQ_add(FES, event);
+  PQ_insert(FES, event->timestamp, event);
 }
 
 Event* nextEvent() {
-  return prioQ_remove(FES);
+  return PQ_delete(FES);
 }
 
 typedef struct Arrival {
@@ -214,18 +214,23 @@ Event* mkDeparture(double t, int location, Customer* c) {
 
 void handleArrival(Arrival* arrival) {
 
-  // dispatching on component type
+  // component that the arrival is sent to
   Component* dest = getFromNetwork(arrival->destID);
+
+  // dispatching on component type and handle accordingly
   if (dest->type == "E") {
     recordExit(customer);
   }
   else if (dest->type == "Q") {
     Station* station = dest->content;
-    if (isEmpty(station)) {
+    if (isEmpty(station) == TRUE) {
       double waitTime = getWaitTime(station);
       schedule(mkDeparture(NOW + waitTime, station, customer));
     }
     addToLine(station, customer);
+  }
+  else if (dest->type == "F") {
+    return;
   }
 }
 
@@ -236,7 +241,12 @@ void handleDeparture(Departure* departure) {
   if (loc->type == "Q") {
     Station* station = loc->content;
     Customer* customer = removeFromLine(station);
-    if (!isEmpty(station)) {
+    // get the next destination from the station
+    int dest = station->outport;
+    schedule(mkArrival(NOW, dest));
+
+    // if station is still not empty, process the next customer
+    if (isEmpty(station) == FALSE) {
       double waitTime = getWaitTime(station);
       schedule(mkDeparture(NOW + waitTime, station, customer));
     }
