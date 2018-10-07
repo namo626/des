@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <string.h>
 #include "Config.h"
 
 /*
@@ -18,8 +19,17 @@ int config(float time, char* configfile, char* outfile) {
 	int num_components;
 	if (fgets(c, sizeof c, ifp) != NULL) {
 		//Checks that first line is an integer
-		if (!isdigit(c)) {
-			return config_error();
+		int i = 0;
+		while (c[i] != '\0') {
+			//TODO: Check why this doesn't work
+			printf("i: %d, c: %c\n", i, c[i]);
+			if (!isdigit(c[i])) {
+				printf(
+						"Error: The first line of the config file is not an integer");
+				fclose(ifp);
+				return 1;
+			}
+			i++;
 		}
 		num_components = atoi(c);
 	}
@@ -31,10 +41,5 @@ int config(float time, char* configfile, char* outfile) {
 
 	fclose(ifp);
 	return 0;
-}
-
-int config_error() {
-	printf("There was an error in the config file.");
-	return 1;
 }
 

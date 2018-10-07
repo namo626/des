@@ -11,7 +11,8 @@
 
 int main(int argc, char *argv[]) {
 	if (argc == 4) {
-		float time = argv[1];
+
+		float time = atof(argv[1]);
 		char* configfile = argv[2];
 		char* outfile = argv[3];
 		return config(time, configfile, outfile);
