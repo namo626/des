@@ -1,8 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "Sim.h"
+#include "Internal.h"
 #include "Queue.h"
-#include "PrioQ.h"
 
 #define TRUE 0
 #define FALSE 1
@@ -47,10 +46,6 @@ Customer* mkCustomer() {
 
 // global network
 Network* NETWORK = NULL;
-// global schedule
-PrioQ* FES = NULL;
-// global clock
-double NOW = 0.0;
 
 // initialize the component array of the network
 void initialize(int amount) {
@@ -61,8 +56,6 @@ void initialize(int amount) {
   NETWORK->entered = 0;
   NETWORK->exited = 0;
 
-  // create the schedule
-  FES = PQ_create();
 }
 
 // add a component to the network
@@ -171,13 +164,6 @@ typedef struct Event {
   void* event; // pointer to the actual event
 } Event;
 
-void schedule(Event* event) {
-  PQ_insert(FES, event->timestamp, event);
-}
-
-Event* nextEvent() {
-  return PQ_delete(FES);
-}
 
 typedef struct Arrival {
   int destID;
@@ -232,7 +218,9 @@ void handleArrival(Arrival* arrival) {
     Station* station = dest->content;
     if (isEmpty(station) == TRUE) {
       double waitTime = getWaitTime(station);
-      schedule(mkDeparture(NOW + waitTime, arrival->destID, customer));
+      double timestamp = waitTime + currentTime();
+      schedule(mkDeparture(timestamp, arrival->destID, customer),
+               timestamp);
     }
     addToLine(station, customer);
   }
@@ -250,18 +238,22 @@ void handleDeparture(Departure* departure) {
     Customer* customer = removeFromLine(station);
     // get the next destination from the station
     int dest = station->outport;
-    schedule(mkArrival(NOW, dest));
+    schedule(mkArrival(currentTime(), dest), currentTime());
 
     // if station is still not empty, process the next customer
     if (isEmpty(station) == FALSE) {
       double waitTime = getWaitTime(station);
-      schedule(mkDeparture(NOW + waitTime, departure->locationID, customer));
+      double timestamp = currentTime() + waitTime;
+      schedule(mkDeparture(timestamp, departure->locationID, customer),
+               timestamp);
     }
   }
 }
 
 // handler on generic events
-void handleEvent(Event* event) {
+void handleEvent(void* e) {
+  Event* event = (Event*) e;
+
   if (event->type == "A") {
     Arrival* arrival = (Arrival*) event->event;
     handleArrival(arrival);
@@ -270,30 +262,4 @@ void handleEvent(Event* event) {
     Departure* departure = (Departure*) event->event;
     handleDeparture(departure);
   }
-}
-
-/*************************************************************/
-/* Running the network simulation */
-
-void runSim(double time) {
-  /* // run the main generator of the network to generate all the arrivals */
-  /* Gen* gen = findGen(); */
-  /* double genTime = 0; */
-  /* double arrivalTime; */
-  /* while (genTime < time) { */
-  /*   arrivalTime = getAvgTime(gen); */
-  /*   Event* ev = mkArrival(genTime + arrivalTime); */
-  /*   // add event to FEL */
-  /*   schedule(ev); */
-  /*   genTime = genTime + arrivalTime; */
-  /* } */
-
-  /* // main event processing loop for events from FEL */
-  /* while (NOW < time) { */
-  /*   // remove event from FEL */
-  /*   Event* event = nextEvent(); */
-  /*   NOW = getTimeStamp(event); */
-  /*   // handleEvent may schedule a new event, for example */
-  /*   handleEvent(event); */
-  /* } */
 }
