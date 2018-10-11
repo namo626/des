@@ -3,6 +3,7 @@
 #include <ctype.h>
 #include <string.h>
 #include "Config.h"
+#include "Sim.h"
 
 /*
  * Runs simulation
@@ -35,7 +36,7 @@ int config(float time, char* configfile, char* outfile) {
 			buffer = realloc(buffer, max_buf);
 			if (buffer == NULL) {
 				//Realloc failed
-				printf("Failed to allocate memory");
+				printf("Failed to allocate memory (reallocation)");
 				fclose(ifp);
 				free(ifp);
 				return 1;
@@ -46,7 +47,7 @@ int config(float time, char* configfile, char* outfile) {
 		buf_length++;
 	}
 	int i = 0;
-	while (buffer[i] != '\0' && buffer[i] != '\n' && buffer[i]!=EOF) {
+	while (buffer[i] != '\0' && buffer[i] != '\n' && buffer[i] != EOF) {
 		if (!isdigit(buffer[i])) {
 			printf(
 					"Error: The first line of the config file is not an integer");
@@ -57,12 +58,45 @@ int config(float time, char* configfile, char* outfile) {
 		i++;
 	}
 	num_components = atoi(buffer);
-	printf("%d", num_components);
+	initialize(num_components);
+
+	//Reset buffer
+	memset(buffer, 0, strlen(buffer));
+	buf_length = 0;
+	ch = '\0';
 
 	//Read the rest of the file
+	while (ch != EOF) {
+		ch = '\0';
+		//Read next line, store in buffer
+		while ((ch != '\n')) {
+			if (buf_length == max_buf) {
+				max_buf *= 2;
+				buffer = realloc(buffer, max_buf);
+				if (buffer == NULL) {
+					//Realloc failed
+					printf("Failed to allocate memory (reallocation)");
+					fclose(ifp);
+					free(ifp);
+					return 1;
+				}
+			}
+			ch = getc(ifp);
+			buffer[buf_length] = ch;
+			buf_length++;
+		}
+		printf("%c", buffer[0]);
 
-	fclose(ifp);
-	free(ifp);
-	return 0;
+		fclose(ifp);
+		free(ifp);
+		free(buffer);
+		return 0;
+	}
+	//Do stuff with buffer
+
+
+	//Reset buffer
+	memset(buffer, 0, strlen(buffer));
+	buf_length = 0;
 }
 
