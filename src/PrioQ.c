@@ -41,16 +41,20 @@ int PQ_insert(PrioQ* PQ, double key, void* data) {
   return result;
 }
 
-void* PQ_delete(PrioQ* PQ) {
+void* PQ_delete(PrioQ* PQ, double* key) {
   List* ls = PQ->list;
   if (ls == NULL) {
-    printf("Queue is empty");
+    printf("Queue is empty\n");
     return NULL;
   }
 
+  double oldKey = ls->listKey;
   void* oldVal = list_delete(&ls);
   PQ->list = ls;
   PQ->count--;
+
+  // fill the key holder
+  *key = oldKey;
 
   return oldVal;
 }

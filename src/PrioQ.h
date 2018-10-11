@@ -25,7 +25,7 @@ int PQ_insert(PrioQ* PQ, double key, void* data);
  * @param PQ pointer to the queue
  * @return pointer to the deleted element
  */
-void* PQ_delete(PrioQ* PQ);
+void* PQ_delete(PrioQ* PQ, double* key);
 
 /*
  * Return the number of elements in the queue

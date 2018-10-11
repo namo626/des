@@ -1,8 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "Sim.h"
+#include "Internal.h"
 #include "Queue.h"
-#include "PrioQ.h"
 
 #define TRUE 0
 #define FALSE 1
@@ -34,11 +33,13 @@ typedef struct Network {
 // Customer type
 typedef struct Customer {
   double totalTime;
+  char* name;
 } Customer;
 
-Customer* mkCustomer() {
+Customer* mkCustomer(char* name) {
   Customer* customer = malloc(sizeof(Customer));
   customer->totalTime = 0;
+  customer->name = name;
   return customer;
 }
 
@@ -47,10 +48,6 @@ Customer* mkCustomer() {
 
 // global network
 Network* NETWORK = NULL;
-// global schedule
-PrioQ* FES = NULL;
-// global clock
-double NOW = 0.0;
 
 // initialize the component array of the network
 void initialize(int amount) {
@@ -61,8 +58,6 @@ void initialize(int amount) {
   NETWORK->entered = 0;
   NETWORK->exited = 0;
 
-  // create the schedule
-  FES = PQ_create();
 }
 
 // add a component to the network
@@ -77,6 +72,7 @@ Component* getFromNetwork(int id) {
 // add an exiting customer
 void recordExit(Customer* customer) {
   NETWORK->exited++;
+  printf("  One customer has exited\n");
 }
 
 // add an entering customer
@@ -145,7 +141,7 @@ void addStation(int id, double param, int outputID) {
 double getWaitTime(Station* station) {
   // random from a distribution based on the avgWaittime param
   double param = station->avgWaitTime;
-  return 1.0;
+  return 10.0;
 }
 
 int isEmpty(Station* station) {
@@ -171,13 +167,6 @@ typedef struct Event {
   void* event; // pointer to the actual event
 } Event;
 
-void schedule(Event* event) {
-  PQ_insert(FES, event->timestamp, event);
-}
-
-Event* nextEvent() {
-  return PQ_delete(FES);
-}
 
 typedef struct Arrival {
   int destID;
@@ -190,11 +179,11 @@ typedef struct Departure {
 } Departure;
 
 
-Event* mkArrival(double time, int outputID) {
+Event* mkArrival(double time, int outputID, char* name) {
   Arrival* arrival = malloc(sizeof(Arrival));
   Event* event = malloc(sizeof(Event));
 
-  arrival->customer = mkCustomer();
+  arrival->customer = mkCustomer(name);
   arrival->destID = outputID;
 
   event->event = arrival;
@@ -229,10 +218,13 @@ void handleArrival(Arrival* arrival) {
     recordExit(customer);
   }
   else if (dest->type == "Q") {
+    printf("  Customer %s arrived\n", customer->name);
     Station* station = dest->content;
     if (isEmpty(station) == TRUE) {
       double waitTime = getWaitTime(station);
-      schedule(mkDeparture(NOW + waitTime, arrival->destID, customer));
+      double timestamp = waitTime + currentTime();
+      schedule(mkDeparture(timestamp, arrival->destID, customer),
+               timestamp);
     }
     addToLine(station, customer);
   }
@@ -250,18 +242,23 @@ void handleDeparture(Departure* departure) {
     Customer* customer = removeFromLine(station);
     // get the next destination from the station
     int dest = station->outport;
-    schedule(mkArrival(NOW, dest));
+    schedule(mkArrival(currentTime(), dest, customer->name), currentTime());
 
     // if station is still not empty, process the next customer
     if (isEmpty(station) == FALSE) {
       double waitTime = getWaitTime(station);
-      schedule(mkDeparture(NOW + waitTime, departure->locationID, customer));
+      double timestamp = currentTime() + waitTime;
+      schedule(mkDeparture(timestamp, departure->locationID, customer),
+               timestamp);
     }
+    printf("  Customer %s departed\n", customer->name);
   }
 }
 
 // handler on generic events
-void handleEvent(Event* event) {
+void handleEvent(void* e) {
+  Event* event = (Event*) e;
+
   if (event->type == "A") {
     Arrival* arrival = (Arrival*) event->event;
     handleArrival(arrival);
@@ -272,28 +269,22 @@ void handleEvent(Event* event) {
   }
 }
 
-/*************************************************************/
-/* Running the network simulation */
+int main() {
+  initialize(10);
+  initFES();
 
-void runSim(double time) {
-  /* // run the main generator of the network to generate all the arrivals */
-  /* Gen* gen = findGen(); */
-  /* double genTime = 0; */
-  /* double arrivalTime; */
-  /* while (genTime < time) { */
-  /*   arrivalTime = getAvgTime(gen); */
-  /*   Event* ev = mkArrival(genTime + arrivalTime); */
-  /*   // add event to FEL */
-  /*   schedule(ev); */
-  /*   genTime = genTime + arrivalTime; */
-  /* } */
+  addGen(0, 15, 1);
+  addExit(1);
+  addStation(2, 15, 1);
 
-  /* // main event processing loop for events from FEL */
-  /* while (NOW < time) { */
-  /*   // remove event from FEL */
-  /*   Event* event = nextEvent(); */
-  /*   NOW = getTimeStamp(event); */
-  /*   // handleEvent may schedule a new event, for example */
-  /*   handleEvent(event); */
-  /* } */
+  Event* ev = mkArrival(15, 2, "A");
+  schedule(ev, ev->timestamp);
+
+  Event* ev2 = mkArrival(22, 2, "B");
+  schedule(ev2, ev2->timestamp);
+
+  Event* ev3 = mkArrival(24, 2, "C");
+  schedule(ev3, ev3->timestamp);
+
+  runSim(100);
 }
