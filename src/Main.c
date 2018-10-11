@@ -11,5 +11,6 @@ int main(int argc, char *argv[]) {
 		return config(time, configfile, outfile);
 	} else {
 		printf("Wrong number of arguments");
+		return NULL;
 	}
 }

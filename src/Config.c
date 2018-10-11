@@ -6,6 +6,12 @@
 #include "Sim.h"
 
 /*
+ * Functions
+ */
+int read_file(FILE* ifp);
+int config(float time, char* configfile, char* outfile);
+
+/*
  * Runs simulation
  */
 int config(float time, char* configfile, char* outfile) {
@@ -13,7 +19,7 @@ int config(float time, char* configfile, char* outfile) {
 	ifp = fopen(configfile, "r");
 	if (ifp == NULL) {
 		printf("Could not open file");
-		return 1;
+		return NULL;
 	}
 
 	int max_buf = 1000;
@@ -23,7 +29,7 @@ int config(float time, char* configfile, char* outfile) {
 		printf("Failed to allocate memory");
 		fclose(ifp);
 		free(ifp);
-		return 1;
+		return NULL;
 	}
 
 	//Get first line of input file, which is number of components
@@ -39,7 +45,7 @@ int config(float time, char* configfile, char* outfile) {
 				printf("Failed to allocate memory (reallocation)");
 				fclose(ifp);
 				free(ifp);
-				return 1;
+				return NULL;
 			}
 		}
 		ch = getc(ifp);
@@ -53,7 +59,7 @@ int config(float time, char* configfile, char* outfile) {
 					"Error: The first line of the config file is not an integer");
 			fclose(ifp);
 			free(ifp);
-			return 1;
+			return NULL;
 		}
 		i++;
 	}
@@ -66,6 +72,25 @@ int config(float time, char* configfile, char* outfile) {
 	ch = '\0';
 
 	//Read the rest of the file
+	if (read_file(ifp) == NULL) {
+		return NULL;
+	} else {
+		return 0;
+	}
+}
+
+int read_file(FILE* ifp) {
+	int max_buf = 1000;
+	char *buffer = malloc(sizeof(char) * max_buf);
+	if (buffer == NULL) {
+		//Malloc failed
+		printf("Failed to allocate memory");
+		fclose(ifp);
+		free(ifp);
+		return NULL;
+	}
+	int buf_length = 0;
+	char ch;
 	while (ch != EOF) {
 		ch = '\0';
 		//Read next line, store in buffer
@@ -78,7 +103,7 @@ int config(float time, char* configfile, char* outfile) {
 					printf("Failed to allocate memory (reallocation)");
 					fclose(ifp);
 					free(ifp);
-					return 1;
+					return NULL;
 				}
 			}
 			ch = getc(ifp);
@@ -87,16 +112,16 @@ int config(float time, char* configfile, char* outfile) {
 		}
 		printf("%c", buffer[0]);
 
-		fclose(ifp);
-		free(ifp);
-		free(buffer);
-		return 0;
+		//Do stuff with buffer
+
+		//Reset buffer
+		memset(buffer, 0, strlen(buffer));
+		buf_length = 0;
 	}
-	//Do stuff with buffer
 
-
-	//Reset buffer
-	memset(buffer, 0, strlen(buffer));
-	buf_length = 0;
+	fclose(ifp);
+	free(ifp);
+	free(buffer);
+	return 0;
 }
 
