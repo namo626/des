@@ -14,32 +14,55 @@ int config(float time, char* configfile, char* outfile) {
 		printf("Could not open file");
 		return 1;
 	}
-	char c[1000];
+
+	int max_buf = 1000;
+	char *buffer = malloc(sizeof(char) * max_buf);
+	if (buffer == NULL) {
+		//Malloc failed
+		printf("Failed to allocate memory");
+		fclose(ifp);
+		free(ifp);
+		return 1;
+	}
+
 	//Get first line of input file, which is number of components
 	int num_components;
-	if (fgets(c, sizeof c, ifp) != NULL) {
-		//Checks that first line is an integer
-		int i = 0;
-		while (c[i] != '\0') {
-			//TODO: Check why this doesn't work
-			printf("i: %d, c: %c\n", i, c[i]);
-			if (!isdigit(c[i])) {
-				printf(
-						"Error: The first line of the config file is not an integer");
+	int buf_length = 0;
+	char ch;
+	while ((ch != '\n') && (ch != EOF)) {
+		if (buf_length == max_buf) {
+			max_buf *= 2;
+			buffer = realloc(buffer, max_buf);
+			if (buffer == NULL) {
+				//Realloc failed
+				printf("Failed to allocate memory");
 				fclose(ifp);
+				free(ifp);
 				return 1;
 			}
-			i++;
 		}
-		num_components = atoi(c);
+		ch = getc(ifp);
+		buffer[buf_length] = ch;
+		buf_length++;
 	}
+	int i = 0;
+	while (buffer[i] != '\0' && buffer[i] != '\n' && buffer[i]!=EOF) {
+		if (!isdigit(buffer[i])) {
+			printf(
+					"Error: The first line of the config file is not an integer");
+			fclose(ifp);
+			free(ifp);
+			return 1;
+		}
+		i++;
+	}
+	num_components = atoi(buffer);
+	printf("%d", num_components);
 
 	//Read the rest of the file
-	while (fgets(c, sizeof c, ifp) != NULL) {
-
-	}
 
 	fclose(ifp);
+	free(ifp);
 	return 0;
 }
 

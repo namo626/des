@@ -268,7 +268,7 @@ void handleEvent(void* e) {
     handleDeparture(departure);
   }
 }
-
+/*
 int main() {
   initialize(10);
   initFES();
@@ -288,3 +288,4 @@ int main() {
 
   runSim(100);
 }
+*/
