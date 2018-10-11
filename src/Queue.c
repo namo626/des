@@ -23,6 +23,10 @@ int isEmptyQ(Queue* Q) {
   return FALSE;
 }
 
+void* viewHead(Queue* Q) {
+  return Q->first->elem;
+}
+
 QElem* mkQElem(void* E) {
   QElem* new = malloc(sizeof(QElem));
   if (new == NULL) {

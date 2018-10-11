@@ -31,15 +31,15 @@ typedef struct Network {
 
 // Customer type
 typedef struct Customer {
-  double totalTime; // total time spent in the system
+  double createTime; // time at which the customer was generated
   double totalWait; // total time of waiting at the queues
   char* name;
   double tempArrTime;
 } Customer;
 
-Customer* mkCustomer(char* name) {
+Customer* mkCustomer(char* name, double time) {
   Customer* customer = malloc(sizeof(Customer));
-  customer->totalTime = 0;
+  customer->createTime = time;
   customer->totalWait = 0;
   customer->tempArrTime = 0;
   customer->name = name;
@@ -123,18 +123,19 @@ void addExit(int id) {
 }
 
 // add an exiting customer
-void recordExit(Exit* exit, double time) {
+void recordExit(Exit* exit, double time, Customer* c) {
   exit->exited++;
-  exit->totalTime = exit->totalTime + time;
+  double duration = time - (c->createTime);
+  exit->totalTime = exit->totalTime + duration;
 
   if (exit->minTime < 0) {
-    exit->minTime = time;
+    exit->minTime = duration;
   }
-  else if (time < exit->minTime) {
-    exit->minTime = time;
+  else if (duration < exit->minTime) {
+    exit->minTime = duration;
   }
-  else if (time > exit->maxTime) {
-    exit->maxTime = time;
+  else if (duration > exit->maxTime) {
+    exit->maxTime = duration;
   }
 
   printf("  One customer has exited\n");
@@ -147,6 +148,14 @@ double avgDuration(Exit* exit) {
 
   return (exit->totalTime) / (exit->exited);
 }
+
+void exitReport(Exit* exit) {
+  printf("Number of customers exited: %d\n", exit->exited);
+  printf("Min time in the system: %.1f\n", exit->minTime);
+  printf("Max time in the system: %.1f\n", exit->maxTime);
+  printf("Avg time in the system: %.1f\n", avgDuration(exit));
+}
+
 
 /*************************************************************/
 /* Station component and its functions */
@@ -184,6 +193,12 @@ double getAvgWaitTime(Station* station) {
   return (station->totalWait) / (station->inLine);
 }
 
+void stationReport(Station* station) {
+  printf("Total number of customers that had to wait in line: %d\n",
+         station->inLine);
+  printf("Average line wait time: %.1f\n", getAvgWaitTime(station));
+}
+
 void incWaitTime(Station* station, double wt) {
   station->totalWait = station->totalWait + wt;
 }
@@ -195,11 +210,14 @@ int isEmpty(Station* station) {
 
 void addToLine(Station* station, Customer* customer) {
   enqueue(station->queue, customer);
-  station->inLine++;
 }
 
 void* removeFromLine(Station* station) {
   return dequeue(station->queue);
+}
+
+void* nextInLine(Station* station) {
+  return viewHead(station->queue);
 }
 
 
@@ -241,7 +259,7 @@ typedef struct Arrival {
 
 typedef struct Departure {
   int locationID;
-  Customer* customer;
+  // Customer* customer;
 } Departure;
 
 
@@ -259,11 +277,11 @@ Event* mkArrival(double time, int outputID, Customer* c) {
   return event;
 }
 
-Event* mkDeparture(double t, int location, Customer* c) {
+Event* mkDeparture(double t, int location) {
   Departure* departure = malloc(sizeof(Departure));
   Event* event = malloc(sizeof(Event));
 
-  departure->customer = c;
+  // departure->customer = c;
   departure->locationID = location;
 
   event->timestamp = t;
@@ -283,7 +301,7 @@ void handleArrival(Arrival* arrival) {
   // dispatching on component type and handle accordingly
   if (dest->type == "E") {
     Exit* exit = dest->content;
-    recordExit(exit, now);
+    recordExit(exit, now, customer);
   }
   else if (dest->type == "Q") {
     printf("  Customer %s arrived\n", customer->name);
@@ -291,12 +309,13 @@ void handleArrival(Arrival* arrival) {
 
     if (isEmpty(station) == TRUE) {
       double leaveTime = getServiceTime(station) + now;
-      schedule(mkDeparture(leaveTime, arrival->destID, customer),
+      schedule(mkDeparture(leaveTime, arrival->destID),
                leaveTime);
     }
     else {
       // mark the time that the customer starts to wait (temporary)
       customer->tempArrTime = now;
+      station->inLine++;
     }
     addToLine(station, customer);
   }
@@ -325,20 +344,22 @@ void handleDeparture(Departure* departure) {
 
     // if station is still not empty, process the next customer
     if (isEmpty(station) == FALSE) {
+      Customer* nextCust = nextInLine(station);
       double leaveTime = getServiceTime(station) + now;
 
       // customer finishes waiting in queue (line)
-      double waitTime = now - (customer->tempArrTime);
-      customer->totalWait = customer->totalWait + waitTime;
+      double waitTime = now - (nextCust->tempArrTime);
+      nextCust->totalWait = nextCust->totalWait + waitTime;
       incWaitTime(station, waitTime);
 
-      schedule(mkDeparture(leaveTime, departure->locationID, customer),
+      schedule(mkDeparture(leaveTime, departure->locationID),
                leaveTime);
     }
     printf("  Customer %s departed\n", customer->name);
   }
   else {
     printf("Error: customer not departing from a Station\n");
+  }
 }
 
 // handler on generic events
@@ -358,6 +379,24 @@ void handleEvent(void* e) {
   free(event);
 }
 
+
+void printReport(int id) {
+  printf("\n");
+
+  Component* comp = getFromNetwork(id);
+
+  if (comp->type == "Q") {
+    Station* st = (Station*) comp->content;
+    stationReport(st);
+  }
+  else if (comp->type == "E") {
+    Exit* exit = comp->content;
+    exitReport(exit);
+  }
+
+  printf("\n");
+}
+
 int main() {
   initialize(10);
   initFES();
@@ -370,14 +409,17 @@ int main() {
   int outports[2] = {1, 2};
   addFork(3, chances, outports);
 
-  Event* ev = mkArrival(15, 3, mkCustomer("A"));
+  Event* ev = mkArrival(15, 3, mkCustomer("A", 15));
   schedule(ev, ev->timestamp);
 
-  Event* ev2 = mkArrival(22, 2, mkCustomer("B"));
+  Event* ev2 = mkArrival(22, 2, mkCustomer("B", 22));
   schedule(ev2, ev2->timestamp);
 
-  Event* ev3 = mkArrival(24, 2, mkCustomer("C"));
+  Event* ev3 = mkArrival(24, 2, mkCustomer("C", 24));
   schedule(ev3, ev3->timestamp);
 
   runSim(100);
+
+  printReport(2);
+  printReport(1);
 }

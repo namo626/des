@@ -14,6 +14,8 @@ typedef struct Queue Queue;
  */
 Queue* mkQueue();
 
+void* viewHead(Queue* Q);
+
 /*
  * Add an element to the queue
  *
