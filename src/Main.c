@@ -1,10 +1,3 @@
-/*
- * Main.c
- *
- *  Created on: 7 okt. 2018
- *      Author: axel_
- */
-
 #include <stdio.h>
 #include <stdlib.h>
 #include "Config.h"

@@ -15,7 +15,7 @@ int config(float time, char* configfile, char* outfile) {
 		return 1;
 	}
 	char c[1000];
-	//Get first line of input file, which is number of vertices
+	//Get first line of input file, which is number of components
 	int num_components;
 	if (fgets(c, sizeof c, ifp) != NULL) {
 		//Checks that first line is an integer
