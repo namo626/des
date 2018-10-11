@@ -31,4 +31,4 @@ void addFork(int id, double* probabilities, int* outputIDs);
 
 /* Run the simulation, modifying state
  */
-void runSim();
+void runSim(double time);

@@ -25,20 +25,23 @@ Component* createComp(char* t, void* c) {
 typedef struct Network {
   int num_components; // should be fixed
   Component** components;
-  int exited;  // customers who have exited
   int entered; // customers who have entered
 } Network;
 
 
 // Customer type
 typedef struct Customer {
-  double totalTime;
+  double totalTime; // total time spent in the system
+  double totalWait; // total time of waiting at the queues
   char* name;
+  double tempArrTime;
 } Customer;
 
 Customer* mkCustomer(char* name) {
   Customer* customer = malloc(sizeof(Customer));
   customer->totalTime = 0;
+  customer->totalWait = 0;
+  customer->tempArrTime = 0;
   customer->name = name;
   return customer;
 }
@@ -56,7 +59,6 @@ void initialize(int amount) {
   NETWORK->num_components = amount;
   NETWORK->components = comps;
   NETWORK->entered = 0;
-  NETWORK->exited = 0;
 
 }
 
@@ -69,14 +71,9 @@ Component* getFromNetwork(int id) {
   return NETWORK->components[id];
 }
 
-// add an exiting customer
-void recordExit(Customer* customer) {
-  NETWORK->exited++;
-  printf("  One customer has exited\n");
-}
 
 // add an entering customer
-void recordEnter(Customer* customer) {
+void recordEnter(Customer* customer, double time) {
   NETWORK->entered++;
 }
 
@@ -107,19 +104,58 @@ void addGen(int id, double p, int outputID) {
 
 /*************************************************************/
 /* Exit component */
+typedef struct Exit {
+  int exited;
+  double totalTime;
+  double minTime;
+  double maxTime;
+} Exit;
 
 void addExit(int id) {
-  Component* comp = createComp("E", NULL);
+  Exit* exit = malloc(sizeof(Exit));
+  exit->exited = 0;
+  exit->totalTime = 0;
+  exit->minTime = -1;
+  exit->maxTime = 0;
+
+  Component* comp = createComp("E", exit);
   addToNetwork(id, comp);
 }
 
+// add an exiting customer
+void recordExit(Exit* exit, double time) {
+  exit->exited++;
+  exit->totalTime = exit->totalTime + time;
+
+  if (exit->minTime < 0) {
+    exit->minTime = time;
+  }
+  else if (time < exit->minTime) {
+    exit->minTime = time;
+  }
+  else if (time > exit->maxTime) {
+    exit->maxTime = time;
+  }
+
+  printf("  One customer has exited\n");
+}
+
+double avgDuration(Exit* exit) {
+  if (exit->exited == 0) {
+    return 0.0;
+  }
+
+  return (exit->totalTime) / (exit->exited);
+}
 
 /*************************************************************/
 /* Station component and its functions */
 
 typedef struct Station {
   Queue* queue;
-  double avgWaitTime; // given parameter
+  double avgServiceTime; // given parameter
+  double totalWait; // how long are customers in a line
+  int inLine; // total number of customers that had to wait in the line
   int outport;
 } Station;
 
@@ -130,7 +166,8 @@ void addStation(int id, double param, int outputID) {
     printf("Not enough memory");
   }
 
-  station->avgWaitTime = param;
+  station->avgServiceTime = param;
+  station->totalWait = 0;
   station->queue = mkQueue();
   station->outport = outputID;
 
@@ -138,11 +175,19 @@ void addStation(int id, double param, int outputID) {
   addToNetwork(id, comp);
 }
 
-double getWaitTime(Station* station) {
-  // random from a distribution based on the avgWaittime param
-  double param = station->avgWaitTime;
-  return 10.0;
+double getServiceTime(Station* station) {
+  return station->avgServiceTime;
 }
+
+// Draw a random wait time of the station
+double getAvgWaitTime(Station* station) {
+  return (station->totalWait) / (station->inLine);
+}
+
+void incWaitTime(Station* station, double wt) {
+  station->totalWait = station->totalWait + wt;
+}
+
 
 int isEmpty(Station* station) {
   return isEmptyQ(station->queue);
@@ -150,12 +195,33 @@ int isEmpty(Station* station) {
 
 void addToLine(Station* station, Customer* customer) {
   enqueue(station->queue, customer);
+  station->inLine++;
 }
 
 void* removeFromLine(Station* station) {
   return dequeue(station->queue);
 }
 
+
+/***********************************************************************
+/* Fork component */
+typedef struct Fork {
+  int* outports;
+  double* chances;
+} Fork;
+
+void addFork(int id, double* chances, int* outports) {
+  Fork* fork = malloc(sizeof(Fork));
+  fork->chances = chances;
+  fork->outports = outports;
+
+  Component* comp = createComp("F", fork);
+  addToNetwork(id, comp);
+}
+
+int randomizePort(Fork* fork) {
+  return fork->outports[1];
+}
 
 /*************************************************************/
 /* Event types */
@@ -179,11 +245,11 @@ typedef struct Departure {
 } Departure;
 
 
-Event* mkArrival(double time, int outputID, char* name) {
+Event* mkArrival(double time, int outputID, Customer* c) {
   Arrival* arrival = malloc(sizeof(Arrival));
   Event* event = malloc(sizeof(Event));
 
-  arrival->customer = mkCustomer(name);
+  arrival->customer = c;
   arrival->destID = outputID;
 
   event->event = arrival;
@@ -208,6 +274,7 @@ Event* mkDeparture(double t, int location, Customer* c) {
 }
 
 void handleArrival(Arrival* arrival) {
+  double now = currentTime();
 
   // component that the arrival is sent to
   Component* dest = getFromNetwork(arrival->destID);
@@ -215,44 +282,63 @@ void handleArrival(Arrival* arrival) {
 
   // dispatching on component type and handle accordingly
   if (dest->type == "E") {
-    recordExit(customer);
+    Exit* exit = dest->content;
+    recordExit(exit, now);
   }
   else if (dest->type == "Q") {
     printf("  Customer %s arrived\n", customer->name);
     Station* station = dest->content;
+
     if (isEmpty(station) == TRUE) {
-      double waitTime = getWaitTime(station);
-      double timestamp = waitTime + currentTime();
-      schedule(mkDeparture(timestamp, arrival->destID, customer),
-               timestamp);
+      double leaveTime = getServiceTime(station) + now;
+      schedule(mkDeparture(leaveTime, arrival->destID, customer),
+               leaveTime);
+    }
+    else {
+      // mark the time that the customer starts to wait (temporary)
+      customer->tempArrTime = now;
     }
     addToLine(station, customer);
   }
   else if (dest->type == "F") {
-    return;
+    Fork* fork = dest->content;
+    int port = randomizePort(fork);
+    schedule(mkArrival(now, port, customer), now);
+    printf("  Customer %s arrived at fork, going to port %d\n", customer->name, port);
   }
 }
 
 void handleDeparture(Departure* departure) {
+  double now = currentTime();
+
   // dispatching on component type
   Component* loc = getFromNetwork(departure->locationID);
+
   // can only depart from a Station
   if (loc->type == "Q") {
     Station* station = loc->content;
     Customer* customer = removeFromLine(station);
-    // get the next destination from the station
+
+    // customer instantly arrives at the next component
     int dest = station->outport;
-    schedule(mkArrival(currentTime(), dest, customer->name), currentTime());
+    schedule(mkArrival(now, dest, customer), now);
 
     // if station is still not empty, process the next customer
     if (isEmpty(station) == FALSE) {
-      double waitTime = getWaitTime(station);
-      double timestamp = currentTime() + waitTime;
-      schedule(mkDeparture(timestamp, departure->locationID, customer),
-               timestamp);
+      double leaveTime = getServiceTime(station) + now;
+
+      // customer finishes waiting in queue (line)
+      double waitTime = now - (customer->tempArrTime);
+      customer->totalWait = customer->totalWait + waitTime;
+      incWaitTime(station, waitTime);
+
+      schedule(mkDeparture(leaveTime, departure->locationID, customer),
+               leaveTime);
     }
     printf("  Customer %s departed\n", customer->name);
   }
+  else {
+    printf("Error: customer not departing from a Station\n");
 }
 
 // handler on generic events
@@ -267,23 +353,30 @@ void handleEvent(void* e) {
     Departure* departure = (Departure*) event->event;
     handleDeparture(departure);
   }
+
+  free(event->event);
+  free(event);
 }
 
 int main() {
   initialize(10);
   initFES();
 
-  addGen(0, 15, 1);
+  addGen(0, 15, 3);
   addExit(1);
   addStation(2, 15, 1);
 
-  Event* ev = mkArrival(15, 2, "A");
+  double chances[2] = {0.2, 0.8};
+  int outports[2] = {1, 2};
+  addFork(3, chances, outports);
+
+  Event* ev = mkArrival(15, 3, mkCustomer("A"));
   schedule(ev, ev->timestamp);
 
-  Event* ev2 = mkArrival(22, 2, "B");
+  Event* ev2 = mkArrival(22, 2, mkCustomer("B"));
   schedule(ev2, ev2->timestamp);
 
-  Event* ev3 = mkArrival(24, 2, "C");
+  Event* ev3 = mkArrival(24, 2, mkCustomer("C"));
   schedule(ev3, ev3->timestamp);
 
   runSim(100);
