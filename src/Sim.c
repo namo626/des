@@ -33,11 +33,13 @@ typedef struct Network {
 // Customer type
 typedef struct Customer {
   double totalTime;
+  char* name;
 } Customer;
 
-Customer* mkCustomer() {
+Customer* mkCustomer(char* name) {
   Customer* customer = malloc(sizeof(Customer));
   customer->totalTime = 0;
+  customer->name = name;
   return customer;
 }
 
@@ -70,6 +72,7 @@ Component* getFromNetwork(int id) {
 // add an exiting customer
 void recordExit(Customer* customer) {
   NETWORK->exited++;
+  printf("  One customer has exited\n");
 }
 
 // add an entering customer
@@ -138,7 +141,7 @@ void addStation(int id, double param, int outputID) {
 double getWaitTime(Station* station) {
   // random from a distribution based on the avgWaittime param
   double param = station->avgWaitTime;
-  return 1.0;
+  return 10.0;
 }
 
 int isEmpty(Station* station) {
@@ -176,11 +179,11 @@ typedef struct Departure {
 } Departure;
 
 
-Event* mkArrival(double time, int outputID) {
+Event* mkArrival(double time, int outputID, char* name) {
   Arrival* arrival = malloc(sizeof(Arrival));
   Event* event = malloc(sizeof(Event));
 
-  arrival->customer = mkCustomer();
+  arrival->customer = mkCustomer(name);
   arrival->destID = outputID;
 
   event->event = arrival;
@@ -215,6 +218,7 @@ void handleArrival(Arrival* arrival) {
     recordExit(customer);
   }
   else if (dest->type == "Q") {
+    printf("  Customer %s arrived\n", customer->name);
     Station* station = dest->content;
     if (isEmpty(station) == TRUE) {
       double waitTime = getWaitTime(station);
@@ -238,7 +242,7 @@ void handleDeparture(Departure* departure) {
     Customer* customer = removeFromLine(station);
     // get the next destination from the station
     int dest = station->outport;
-    schedule(mkArrival(currentTime(), dest), currentTime());
+    schedule(mkArrival(currentTime(), dest, customer->name), currentTime());
 
     // if station is still not empty, process the next customer
     if (isEmpty(station) == FALSE) {
@@ -247,6 +251,7 @@ void handleDeparture(Departure* departure) {
       schedule(mkDeparture(timestamp, departure->locationID, customer),
                timestamp);
     }
+    printf("  Customer %s departed\n", customer->name);
   }
 }
 
@@ -262,4 +267,24 @@ void handleEvent(void* e) {
     Departure* departure = (Departure*) event->event;
     handleDeparture(departure);
   }
+}
+
+int main() {
+  initialize(10);
+  initFES();
+
+  addGen(0, 15, 1);
+  addExit(1);
+  addStation(2, 15, 1);
+
+  Event* ev = mkArrival(15, 2, "A");
+  schedule(ev, ev->timestamp);
+
+  Event* ev2 = mkArrival(22, 2, "B");
+  schedule(ev2, ev2->timestamp);
+
+  Event* ev3 = mkArrival(24, 2, "C");
+  schedule(ev3, ev3->timestamp);
+
+  runSim(100);
 }

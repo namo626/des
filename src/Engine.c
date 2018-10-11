@@ -12,19 +12,22 @@ double currentTime() {
   return NOW;
 }
 
+void initFES() {
+  FES = PQ_create();
+}
+
 void schedule(void* event, double timestamp) {
   PQ_insert(FES, timestamp, event);
 }
 
-void* nextEvent() {
-  return PQ_delete(FES);
+void* nextEvent(double* holder) {
+  return PQ_delete(FES, holder);
 }
 
 /*************************************************************/
 /* Running the network simulation */
 
 void runSim(double time) {
-  FES = PQ_create();
   /* // run the main generator of the network to generate all the arrivals */
   /* Gen* gen = findGen(); */
   /* double genTime = 0; */
@@ -37,12 +40,15 @@ void runSim(double time) {
   /*   genTime = genTime + arrivalTime; */
   /* } */
 
-  /* // main event processing loop for events from FEL */
-  /* while (NOW < time) { */
-  /*   // remove event from FEL */
-  /*   Event* event = nextEvent(); */
-  /*   NOW = getTimeStamp(event); */
-  /*   // handleEvent may schedule a new event, for example */
-  /*   handleEvent(event); */
-  /* } */
+  // main event processing loop for events from FEL
+  double timeHolder;
+  void* event;
+  while ((event=nextEvent(&timeHolder)) != NULL) {
+    // update the clock
+    NOW = timeHolder;
+    if (NOW > time) break;
+    printf("Clock is now %.1f\n", NOW);
+    // handleEvent may schedule a new event, for example
+    handleEvent(event);
+  }
 }
