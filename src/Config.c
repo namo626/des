@@ -8,8 +8,10 @@
 /*
  * Functions
  */
-int read_file(FILE* ifp);
+void* read_file(FILE* ifp);
 int config(float time, char* configfile, char* outfile);
+void *read_line(char* buffer);
+int get_id(char* buffer);
 
 /*
  * Runs simulation
@@ -19,7 +21,7 @@ int config(float time, char* configfile, char* outfile) {
 	ifp = fopen(configfile, "r");
 	if (ifp == NULL) {
 		printf("Could not open file");
-		return NULL;
+		return 1;
 	}
 
 	int max_buf = 1000;
@@ -29,7 +31,7 @@ int config(float time, char* configfile, char* outfile) {
 		printf("Failed to allocate memory");
 		fclose(ifp);
 		free(ifp);
-		return NULL;
+		return 1;
 	}
 
 	//Get first line of input file, which is number of components
@@ -45,7 +47,7 @@ int config(float time, char* configfile, char* outfile) {
 				printf("Failed to allocate memory (reallocation)");
 				fclose(ifp);
 				free(ifp);
-				return NULL;
+				return 1;
 			}
 		}
 		ch = getc(ifp);
@@ -59,27 +61,22 @@ int config(float time, char* configfile, char* outfile) {
 					"Error: The first line of the config file is not an integer");
 			fclose(ifp);
 			free(ifp);
-			return NULL;
+			return 1;
 		}
 		i++;
 	}
 	num_components = atoi(buffer);
 	initialize(num_components);
 
-	//Reset buffer
-	memset(buffer, 0, strlen(buffer));
-	buf_length = 0;
-	ch = '\0';
-
 	//Read the rest of the file
 	if (read_file(ifp) == NULL) {
-		return NULL;
+		return 1;
 	} else {
 		return 0;
 	}
 }
 
-int read_file(FILE* ifp) {
+void* read_file(FILE* ifp) {
 	int max_buf = 1000;
 	char *buffer = malloc(sizeof(char) * max_buf);
 	if (buffer == NULL) {
@@ -94,7 +91,7 @@ int read_file(FILE* ifp) {
 	while (ch != EOF) {
 		ch = '\0';
 		//Read next line, store in buffer
-		while ((ch != '\n')) {
+		while (ch != '\n' && ch != EOF) {
 			if (buf_length == max_buf) {
 				max_buf *= 2;
 				buffer = realloc(buffer, max_buf);
@@ -110,9 +107,11 @@ int read_file(FILE* ifp) {
 			buffer[buf_length] = ch;
 			buf_length++;
 		}
-		printf("%c", buffer[0]);
 
-		//Do stuff with buffer
+		//Read line of buffer
+		if (read_line(buffer) == NULL) {
+			return NULL;
+		}
 
 		//Reset buffer
 		memset(buffer, 0, strlen(buffer));
@@ -122,6 +121,29 @@ int read_file(FILE* ifp) {
 	fclose(ifp);
 	free(ifp);
 	free(buffer);
-	return 0;
+	return ((void*) 1);
 }
 
+void *read_line(char* buffer) {
+	int id = get_id(buffer);
+	if(id==-1){
+		return NULL;
+	}
+	printf("%d\n",id);
+
+	return ((void*)1);
+}
+
+int get_id(char* buffer){
+	int i=0;
+	while (buffer[i] != ' ') {
+			if (!isdigit(buffer[i])) {
+				printf(
+						"Error: Each line must start with component ID");
+				return -1;
+			}
+			i++;
+		}
+	buffer[i] = '\0';
+	return atoi(buffer);
+}
