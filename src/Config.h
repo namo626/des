@@ -1,5 +1,6 @@
 /*
  * Interface for configuration program
+ *
  * Created by Axel Berglund and Chayanon Wichitrnithed
  */
 

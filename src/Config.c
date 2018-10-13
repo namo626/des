@@ -12,6 +12,7 @@ void* read_file(FILE* ifp);
 int config(float time, char* configfile, char* outfile);
 void *read_line(char* buffer);
 int get_id(char* buffer);
+char get_component_type(char* buffer);
 
 /*
  * Runs simulation
@@ -69,10 +70,10 @@ int config(float time, char* configfile, char* outfile) {
 	initialize(num_components);
 
 	//Read the rest of the file
-	if (read_file(ifp) == NULL) {
-		return 1;
-	} else {
+	if (!(read_file(ifp) == NULL)) {
 		return 0;
+	} else {
+		return 1;
 	}
 }
 
@@ -107,14 +108,17 @@ void* read_file(FILE* ifp) {
 			buffer[buf_length] = ch;
 			buf_length++;
 		}
+		buffer[buf_length-1] = '\0';
 
 		//Read line of buffer
 		if (read_line(buffer) == NULL) {
+			fclose(ifp);
+			free(ifp);
+			free(buffer);
 			return NULL;
 		}
 
 		//Reset buffer
-		memset(buffer, 0, strlen(buffer));
 		buf_length = 0;
 	}
 
@@ -125,25 +129,58 @@ void* read_file(FILE* ifp) {
 }
 
 void *read_line(char* buffer) {
-	int id = get_id(buffer);
-	if(id==-1){
-		return NULL;
-	}
-	printf("%d\n",id);
+	char *split = strtok(buffer, " ");
+	int id;
+	char component_type;
+	int count = 0;
+	while (split != NULL) {
+		if (count == 0) {
+			//ID
+			id = get_id(split);
+			if(id==-1){
+				return NULL;
+			}
+			printf("ID: %d\n", id);
+		}
+		if (count == 1){
+			//Component type
+			component_type = get_component_type(split);
+			if(component_type == '\0'){
+				return NULL;
+			}
+			printf("Component type: %c\n", component_type);
+		}
+		count++;
+		split = strtok(NULL, " ");
 
-	return ((void*)1);
+	}
+
+	return ((void*) 1);
 }
 
-int get_id(char* buffer){
-	int i=0;
-	while (buffer[i] != ' ') {
-			if (!isdigit(buffer[i])) {
-				printf(
-						"Error: Each line must start with component ID");
-				return -1;
-			}
-			i++;
+//Gets the ID of the component by reading first part of line
+int get_id(char* buffer) {
+	int i = 0;
+	while (i < strlen(buffer)) {
+		if (!isdigit(buffer[i])) {
+			printf("Error: Each line must start with component ID");
+			return -1;
 		}
-	buffer[i] = '\0';
+		i++;
+	}
 	return atoi(buffer);
+}
+
+char get_component_type(char* buffer) {
+	if(strlen(buffer)>1){
+		printf("Component type should only be one letter");
+		return '\0';
+	}
+	char ch = buffer[0];
+	if(ch == 'G' || ch == 'E' || ch == 'Q' || ch == 'F'){
+		return ch;
+	} else {
+		printf("Component type incorrect");
+		return '\0';
+	}
 }
