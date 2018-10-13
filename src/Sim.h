@@ -32,3 +32,9 @@ void addFork(int id, double* probabilities, int* outputIDs);
 /* Run the simulation, modifying state
  */
 void runSim(double time);
+
+/* Print the statistics of a component
+ */
+void printReport(int id);
+
+void networkReport();

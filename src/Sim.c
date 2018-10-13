@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "Internal.h"
 #include "Queue.h"
+#include "Sim.h"
 
 #define TRUE 0
 #define FALSE 1
@@ -25,17 +26,18 @@ Component* createComp(char* t, void* c) {
 typedef struct Network {
   int num_components; // should be fixed
   Component** components;
-  int entered; // customers who have entered
+  CustList* entered; // a list containing all the customers who have entered
 } Network;
 
 
 // Customer type
-typedef struct Customer {
+struct Customer {
   double createTime; // time at which the customer was generated
   double totalWait; // total time of waiting at the queues
   char* name;
+
   double tempArrTime;
-} Customer;
+};
 
 Customer* mkCustomer(char* name, double time) {
   Customer* customer = malloc(sizeof(Customer));
@@ -44,6 +46,10 @@ Customer* mkCustomer(char* name, double time) {
   customer->tempArrTime = 0;
   customer->name = name;
   return customer;
+}
+
+double totalWait(Customer* cust) {
+  return cust->totalWait;
 }
 
 /*************************************************************/
@@ -58,7 +64,10 @@ void initialize(int amount) {
   NETWORK = malloc(sizeof(Network));
   NETWORK->num_components = amount;
   NETWORK->components = comps;
-  NETWORK->entered = 0;
+  NETWORK->entered = mkCustList();
+
+  // initialize the event priority queue
+  initFES();
 
 }
 
@@ -73,33 +82,15 @@ Component* getFromNetwork(int id) {
 
 
 // add an entering customer
-void recordEnter(Customer* customer, double time) {
-  NETWORK->entered++;
+void recordEnter(Customer* customer) {
+  insertCust(NETWORK->entered, customer);
 }
 
-
-/***************************************************************/
-/* Generator component and its functions */
-
-typedef struct Gen {
-  int outport; // array of IDs of the connected components
-  double avgArrivalTime; // parameter: average arrival time
-} Gen;
-
-// create and add a generator component to the global network
-void addGen(int id, double p, int outputID) {
-  Gen* gen = malloc(sizeof(Gen));
-
-  if (gen == NULL) {
-    printf("Not enough memory");
-  }
-
-  gen->outport = outputID;
-  gen->avgArrivalTime = p;
-
-  Component* comp = createComp("G", gen);
-  addToNetwork(id, comp);
-
+void networkReport() {
+  printf("Number of components in system: %d\n", NETWORK->num_components);
+  printf("Number of customers that have entered: %d\n", custCount(NETWORK->entered));
+  printf("Max wait time among customers: %.1f\n", maxWaitTime(NETWORK->entered));
+  printf("Min wait time among customers: %.1f\n", minWaitTime(NETWORK->entered));
 }
 
 /*************************************************************/
@@ -251,7 +242,6 @@ typedef struct Event {
   void* event; // pointer to the actual event
 } Event;
 
-
 typedef struct Arrival {
   int destID;
   Customer* customer;
@@ -261,6 +251,12 @@ typedef struct Departure {
   int locationID;
   // Customer* customer;
 } Departure;
+
+typedef struct Generation {
+  int genID;
+  int destID;
+} Generation;
+
 
 
 Event* mkArrival(double time, int outputID, Customer* c) {
@@ -289,6 +285,76 @@ Event* mkDeparture(double t, int location) {
   event->event = departure;
 
   return event;
+}
+
+Event* mkGeneration(double t, int genID, int destID) {
+  Generation* gen = malloc(sizeof(Generation));
+  Event* event = malloc(sizeof(Event));
+
+  gen->genID = genID;
+  gen->destID = destID;
+
+  event->timestamp = t;
+  event->type = "M";
+  event->event = gen;
+
+  return event;
+}
+
+
+/***************************************************************/
+/* Generator component and its functions */
+
+typedef struct Gen {
+  int outport; // array of IDs of the connected components
+  double avgArrivalTime; // parameter: average arrival time
+} Gen;
+
+double getGenTime(Gen* gen) {
+  return gen->avgArrivalTime;
+}
+
+// create and add a generator component to the global network
+void addGen(int id, double p, int outputID) {
+  Gen* gen = malloc(sizeof(Gen));
+
+  if (gen == NULL) {
+    printf("Not enough memory");
+  }
+
+  gen->outport = outputID;
+  gen->avgArrivalTime = p;
+
+  Component* comp = createComp("G", gen);
+  addToNetwork(id, comp);
+
+  // initialize the first generation
+  double now = currentTime(); // should be 0.0
+  double timestamp = now + getGenTime(gen);
+  Event* ev = mkGeneration(timestamp, id, outputID);
+  schedule(ev, timestamp);
+
+}
+
+
+/***************************************************************/
+
+void handleGeneration(Generation* gent) {
+  double now = currentTime();
+
+  // make a new customer now
+  Customer* c = mkCustomer("", now);
+  recordEnter(c);
+  printf("  A customer has been created\n");
+
+  // schedule the arrival event
+  schedule(mkArrival(now, gent->destID, c), now);
+
+  // schedule next generation event
+  Component* comp = getFromNetwork(gent->genID);
+  Gen* gen = comp->content;
+  double t = getGenTime(gen);
+  schedule(mkGeneration(now+t, gent->genID, gent->destID), now+t);
 }
 
 void handleArrival(Arrival* arrival) {
@@ -374,11 +440,18 @@ void handleEvent(void* e) {
     Departure* departure = (Departure*) event->event;
     handleDeparture(departure);
   }
+  else if (event->type == "M") {
+    Generation* gent = event->event;
+    handleGeneration(gent);
+  }
 
   free(event->event);
   free(event);
 }
 
+
+/***********************************************************************/
+/* Printing statistics */
 
 void printReport(int id) {
   printf("\n");
@@ -395,31 +468,4 @@ void printReport(int id) {
   }
 
   printf("\n");
-}
-
-int main() {
-  initialize(10);
-  initFES();
-
-  addGen(0, 15, 3);
-  addExit(1);
-  addStation(2, 15, 1);
-
-  double chances[2] = {0.2, 0.8};
-  int outports[2] = {1, 2};
-  addFork(3, chances, outports);
-
-  Event* ev = mkArrival(15, 3, mkCustomer("A", 15));
-  schedule(ev, ev->timestamp);
-
-  Event* ev2 = mkArrival(22, 2, mkCustomer("B", 22));
-  schedule(ev2, ev2->timestamp);
-
-  Event* ev3 = mkArrival(24, 2, mkCustomer("C", 24));
-  schedule(ev3, ev3->timestamp);
-
-  runSim(100);
-
-  printReport(2);
-  printReport(1);
 }

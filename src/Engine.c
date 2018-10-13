@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "Internal.h"
 #include "PrioQ.h"
+#include "Sim.h"
 
 // global schedule
 PrioQ* FES;
@@ -28,17 +29,6 @@ void* nextEvent(double* holder) {
 /* Running the network simulation */
 
 void runSim(double time) {
-  /* // run the main generator of the network to generate all the arrivals */
-  /* Gen* gen = findGen(); */
-  /* double genTime = 0; */
-  /* double arrivalTime; */
-  /* while (genTime < time) { */
-  /*   arrivalTime = getAvgTime(gen); */
-  /*   Event* ev = mkArrival(genTime + arrivalTime); */
-  /*   // add event to FEL */
-  /*   schedule(ev); */
-  /*   genTime = genTime + arrivalTime; */
-  /* } */
 
   // main event processing loop for events from FEL
   double timeHolder;
