@@ -91,6 +91,7 @@ void* read_file(FILE* ifp) {
 	char ch;
 	while (ch != EOF) {
 		ch = '\0';
+
 		//Read next line, store in buffer
 		while (ch != '\n' && ch != EOF) {
 			if (buf_length == max_buf) {
@@ -108,7 +109,7 @@ void* read_file(FILE* ifp) {
 			buffer[buf_length] = ch;
 			buf_length++;
 		}
-		buffer[buf_length-1] = '\0';
+		buffer[buf_length - 1] = '\0';
 
 		//Read line of buffer
 		if (read_line(buffer) == NULL) {
@@ -118,7 +119,7 @@ void* read_file(FILE* ifp) {
 			return NULL;
 		}
 
-		//Reset buffer
+		//New line/buffer
 		buf_length = 0;
 	}
 
@@ -137,22 +138,21 @@ void *read_line(char* buffer) {
 		if (count == 0) {
 			//ID
 			id = get_id(split);
-			if(id==-1){
+			if (id == -1) {
 				return NULL;
 			}
 			printf("ID: %d\n", id);
 		}
-		if (count == 1){
+		if (count == 1) {
 			//Component type
 			component_type = get_component_type(split);
-			if(component_type == '\0'){
+			if (component_type == '\0') {
 				return NULL;
 			}
 			printf("Component type: %c\n", component_type);
 		}
 		count++;
 		split = strtok(NULL, " ");
-
 	}
 
 	return ((void*) 1);
@@ -172,15 +172,15 @@ int get_id(char* buffer) {
 }
 
 char get_component_type(char* buffer) {
-	if(strlen(buffer)>1){
+	if (strlen(buffer) > 1) {
 		printf("Component type should only be one letter");
 		return '\0';
 	}
 	char ch = buffer[0];
-	if(ch == 'G' || ch == 'E' || ch == 'Q' || ch == 'F'){
+	if (ch == 'G' || ch == 'E' || ch == 'Q' || ch == 'F') {
 		return ch;
 	} else {
-		printf("Component type incorrect");
+		printf("Component type does not exist (%c)", ch);
 		return '\0';
 	}
 }
