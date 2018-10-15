@@ -27,7 +27,7 @@ void addStation(int id, double avgServeTime, int outputID);
 
 /* Add a Fork component
  */
-void addFork(int id, double* probabilities, int* outputIDs);
+void addFork(int id, int count, double* probabilities, int* outputIDs);
 
 /* Run the simulation, modifying state
  */

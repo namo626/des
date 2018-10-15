@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 #include "Internal.h"
 #include "Queue.h"
 #include "Sim.h"
@@ -7,7 +8,20 @@
 #define TRUE 0
 #define FALSE 1
 
-// COmponent is a general type for all components
+/***********************************************************************/
+/* Auxiliary functions */
+
+double urand() {
+  return (double)rand() / (double)((unsigned)RAND_MAX + 1);
+}
+
+double randexp(double mean) {
+  return -mean * (log(1.0-urand()));
+}
+
+/***********************************************************************/
+
+// Component is a general type for all components
 typedef struct Component {
   char* type;
   void* content;
@@ -16,7 +30,10 @@ typedef struct Component {
 // Make a general component to hold a specific component
 Component* createComp(char* t, void* c) {
   Component* comp = malloc(sizeof(Component));
-  // check if comp is NULL
+  if (comp == NULL) {
+    printf("Could not create a Component\n");
+    return NULL;
+  }
   comp->type = t;
   comp->content = c;
   return comp;
@@ -41,6 +58,9 @@ struct Customer {
 
 Customer* mkCustomer(char* name, double time) {
   Customer* customer = malloc(sizeof(Customer));
+  if (customer == NULL) {
+    printf("Could not create a Customer\n");
+  }
   customer->createTime = time;
   customer->totalWait = 0;
   customer->tempArrTime = 0;
@@ -79,7 +99,6 @@ void addToNetwork(int id, Component* comp) {
 Component* getFromNetwork(int id) {
   return NETWORK->components[id];
 }
-
 
 // add an entering customer
 void recordEnter(Customer* customer) {
@@ -163,7 +182,7 @@ void addStation(int id, double param, int outputID) {
   Station* station = malloc(sizeof(Station));
 
   if (station == NULL) {
-    printf("Not enough memory");
+    printf("Could not create a Station\n");
   }
 
   station->avgServiceTime = param;
@@ -175,8 +194,10 @@ void addStation(int id, double param, int outputID) {
   addToNetwork(id, comp);
 }
 
+// Return a randomized service time
 double getServiceTime(Station* station) {
-  return station->avgServiceTime;
+  double meanTime = station->avgServiceTime;
+  return randexp(meanTime);
 }
 
 // Draw a random wait time of the station
@@ -185,13 +206,17 @@ double getAvgWaitTime(Station* station) {
 }
 
 void stationReport(Station* station) {
-  printf("Total number of customers that had to wait in line: %d\n",
+  printf("Total number of instances of waiting in line: %d\n",
          station->inLine);
   printf("Average line wait time: %.1f\n", getAvgWaitTime(station));
 }
 
 void incWaitTime(Station* station, double wt) {
   station->totalWait = station->totalWait + wt;
+}
+
+void incInLine(Station* station) {
+  station->inLine++;
 }
 
 
@@ -217,19 +242,38 @@ void* nextInLine(Station* station) {
 typedef struct Fork {
   int* outports;
   double* chances;
+  int count;
 } Fork;
 
-void addFork(int id, double* chances, int* outports) {
+void addFork(int id, int count, double* chances, int* outports) {
   Fork* fork = malloc(sizeof(Fork));
+  if (fork == NULL) {
+    printf("Could not create a Fork\n");
+    return;
+  }
   fork->chances = chances;
   fork->outports = outports;
+  fork->count = count;
 
   Component* comp = createComp("F", fork);
   addToNetwork(id, comp);
 }
 
+// https://stackoverflow.com/questions/4265988/generate-random-numbers-with-a-given-numerical-distribution
 int randomizePort(Fork* fork) {
-  return fork->outports[1];
+  double* chances = fork->chances;
+  int* ports = fork->outports;
+  double prob = urand();
+  double s = 0;
+  for (int i = 0; i < fork->count; i++) {
+    s = s + chances[i];
+    if (s >= prob) {
+      return ports[i];
+    }
+  }
+
+  // in case of inaccuracies
+  return ports[fork->count - 1];
 }
 
 /*************************************************************/
@@ -257,46 +301,56 @@ typedef struct Generation {
   int destID;
 } Generation;
 
+Event* mkEvent(double time, char* type, void* ev) {
+  Event* new = malloc(sizeof(Event));
+  if (new == NULL) {
+    printf("Could not create an Event\n");
+    return NULL;
+  }
+  new->timestamp = time;
+  new->type = type;
+  new->event = ev;
+  return new;
+}
 
 
 Event* mkArrival(double time, int outputID, Customer* c) {
   Arrival* arrival = malloc(sizeof(Arrival));
-  Event* event = malloc(sizeof(Event));
-
+  if (arrival == NULL) {
+    printf("Could not create an Arrival event\n");
+    return NULL;
+  }
   arrival->customer = c;
   arrival->destID = outputID;
 
-  event->event = arrival;
-  event->type = "A";
-  event->timestamp = time;
+  Event* event = mkEvent(time, "A", arrival);
 
   return event;
 }
 
 Event* mkDeparture(double t, int location) {
   Departure* departure = malloc(sizeof(Departure));
-  Event* event = malloc(sizeof(Event));
-
-  // departure->customer = c;
+  if (departure == NULL) {
+    printf("Could not create a departure event\n");
+    return NULL;
+  }
   departure->locationID = location;
 
-  event->timestamp = t;
-  event->type = "D";
-  event->event = departure;
+  Event* event = mkEvent(t, "D", departure);
 
   return event;
 }
 
 Event* mkGeneration(double t, int genID, int destID) {
   Generation* gen = malloc(sizeof(Generation));
-  Event* event = malloc(sizeof(Event));
-
+  if (gen == NULL) {
+    printf("Could not create a Generator event\n");
+    return NULL;
+  }
   gen->genID = genID;
   gen->destID = destID;
 
-  event->timestamp = t;
-  event->type = "M";
-  event->event = gen;
+  Event* event = mkEvent(t, "M", gen);
 
   return event;
 }
@@ -310,8 +364,10 @@ typedef struct Gen {
   double avgArrivalTime; // parameter: average arrival time
 } Gen;
 
+// Return a random arrival time (duration)
 double getGenTime(Gen* gen) {
-  return gen->avgArrivalTime;
+  double meanTime = gen->avgArrivalTime;
+  return randexp(meanTime);
 }
 
 // create and add a generator component to the global network
@@ -319,7 +375,8 @@ void addGen(int id, double p, int outputID) {
   Gen* gen = malloc(sizeof(Gen));
 
   if (gen == NULL) {
-    printf("Not enough memory");
+    printf("Could not create a Generator\n");
+    return;
   }
 
   gen->outport = outputID;
@@ -370,7 +427,7 @@ void handleArrival(Arrival* arrival) {
     recordExit(exit, now, customer);
   }
   else if (dest->type == "Q") {
-    printf("  Customer %s arrived\n", customer->name);
+    printf("  Customer %s arrived at station %d\n", customer->name, arrival->destID);
     Station* station = dest->content;
 
     if (isEmpty(station) == TRUE) {
@@ -381,7 +438,6 @@ void handleArrival(Arrival* arrival) {
     else {
       // mark the time that the customer starts to wait (temporary)
       customer->tempArrTime = now;
-      station->inLine++;
     }
     addToLine(station, customer);
   }
@@ -416,7 +472,9 @@ void handleDeparture(Departure* departure) {
       // customer finishes waiting in queue (line)
       double waitTime = now - (nextCust->tempArrTime);
       nextCust->totalWait = nextCust->totalWait + waitTime;
+      printf("  Next customer has waited for %.1f\n", nextCust->totalWait);
       incWaitTime(station, waitTime);
+      incInLine(station);
 
       schedule(mkDeparture(leaveTime, departure->locationID),
                leaveTime);
