@@ -33,8 +33,10 @@ void addFork(int id, int count, double* probabilities, int* outputIDs);
  */
 void runSim(double time);
 
-/* Print the statistics of a component
+/* Print the statistics of a component (appending)
  */
-void printReport(int id);
+void printReport(int id, char* filename);
 
-void networkReport();
+/* Print to statistics of the global state (overwriting)
+ */
+void networkReport(char* filename);
