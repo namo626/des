@@ -369,7 +369,7 @@ void* create_g_q(int id, int gen, int is_output[], int num_components) {
 					printf("ERROR: Interarrival time of generator should be a number");
 				} else {
 					printf(
-							"ERROR: Interarrival time of queuing station should be a number");
+							"ERROR: Service time of queuing station should be a number");
 				}
 				return NULL;
 			}
@@ -413,7 +413,7 @@ void* create_g_q(int id, int gen, int is_output[], int num_components) {
 	}
 	if (strtok(NULL, " ") != NULL) {
 		if (gen) {
-			printf("ERROR: Too many arguments to generator component");
+			printf("ERROR: Too many arguments for generator component");
 			return NULL;
 		} else {
 			printf("ERROR: Too many arguments for queuing station component");
