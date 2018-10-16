@@ -33,7 +33,7 @@ int config(double time, char* configfile, char* outfile) {
 		//Malloc failed
 		printf("Failed to allocate memory");
 		fclose(ifp);
-		free(ifp);
+
 		return 1;
 	}
 
@@ -49,7 +49,7 @@ int config(double time, char* configfile, char* outfile) {
 				//Realloc failed
 				printf("Failed to allocate memory (reallocation)");
 				fclose(ifp);
-				free(ifp);
+
 				return 1;
 			}
 		}
@@ -63,7 +63,6 @@ int config(double time, char* configfile, char* outfile) {
 			printf(
 					"ERROR: The first line of the config file is not an integer");
 			fclose(ifp);
-			free(ifp);
 			free(buffer);
 			return 1;
 		}
@@ -79,12 +78,13 @@ int config(double time, char* configfile, char* outfile) {
 		//All components added successfully, run simulation
 		printf("Running simulation...\n");
 		runSim(time);
-		free(ifp);
+		networkReport(outfile);
+		fclose(ifp);
 		free(buffer);
 		return 0;
 	} else {
 		//There was an error
-		free(ifp);
+		fclose(ifp);
 		free(buffer);
 		return 1;
 	}
@@ -110,7 +110,6 @@ void* read_file(FILE* ifp, int num_components) {
 		//Malloc failed
 		printf("Failed to allocate memory");
 		fclose(ifp);
-		free(ifp);
 		return NULL;
 	}
 	int buf_length = 0;
@@ -127,7 +126,6 @@ void* read_file(FILE* ifp, int num_components) {
 					//Realloc failed
 					printf("Failed to allocate memory (reallocation)");
 					fclose(ifp);
-					free(ifp);
 					return NULL;
 				}
 			}
@@ -141,7 +139,6 @@ void* read_file(FILE* ifp, int num_components) {
 		if (read_line(buffer, num_components, has_id, is_output,
 				is_generator) == NULL) {
 			fclose(ifp);
-			free(ifp);
 			free(buffer);
 			return NULL;
 		}
@@ -150,7 +147,6 @@ void* read_file(FILE* ifp, int num_components) {
 		buf_length = 0;
 	}
 	fclose(ifp);
-	free(ifp);
 	free(buffer);
 	return ((void*) 1);
 }
