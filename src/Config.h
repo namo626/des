@@ -8,7 +8,12 @@
 #define SRC_CONFIG_H_
 
 /*
- * Run sim
+ * Reads config file and runs simulation
+ *
+ * @param time the simulation time the simulator should run
+ * @param configfile the name of the configuration file
+ * @param outfile the name of the output file
+ * @return 0 if successful, 1 otherwise
  */
 int config(double time, char* configfile, char* outfile);
 

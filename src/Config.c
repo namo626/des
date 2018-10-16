@@ -8,7 +8,6 @@
 /*
  * Functions
  */
-int config(double time, char* configfile, char* outfile);
 void *read_file(FILE* ifp, int num_components);
 void *read_line(char* buffer, int num_components, int has_id[], int is_output[],
 		int is_generator[]);
@@ -18,7 +17,7 @@ void *create_g_q(int id, int gen, int is_output[], int num_components);
 void *create_fork(int id, int is_output[], int num_components);
 
 /*
- * Runs simulation
+ * Reads config file and runs simulation
  */
 int config(double time, char* configfile, char* outfile) {
 	FILE* ifp;
@@ -173,7 +172,8 @@ void *read_line(char* buffer, int num_components, int has_id[], int is_output[],
 				return NULL;
 			}
 			if (has_id[id]) {
-				printf("ERROR: The configuration file contains two identical IDs");
+				printf(
+						"ERROR: The configuration file contains two identical IDs");
 				return NULL;
 			}
 			has_id[id] = 1;
@@ -259,7 +259,7 @@ void* create_fork(int id, int is_output[], int num_components) {
 
 	//Probabilities
 	double* probabilities = malloc(num_ports * sizeof(double));
-	if(probabilities == NULL){
+	if (probabilities == NULL) {
 		printf("Failed to allocate memory");
 		return NULL;
 	}
@@ -296,7 +296,7 @@ void* create_fork(int id, int is_output[], int num_components) {
 
 	//Output ids
 	int *output_ids = malloc(num_ports * sizeof(int));
-	if(output_ids == NULL){
+	if (output_ids == NULL) {
 		printf("Failed to allocate memory");
 		return NULL;
 	}
@@ -335,7 +335,19 @@ void* create_fork(int id, int is_output[], int num_components) {
 		free(output_ids);
 		return NULL;
 	}
-	addFork(id, probabilities, output_ids);
+	//Check that probabilities add up to 1
+	double sum = 0.0;
+	for(int i=0;i<num_ports;i++){
+		sum+=probabilities[i];
+	}
+	if(sum!=1){
+		printf("ERROR: Probabilities of fork must add up to 1");
+		free(probabilities);
+		free(output_ids);
+		return NULL;
+	}
+
+	addFork(id, num_ports, probabilities, output_ids);
 	printf("Created fork component\n\n");
 	free(probabilities);
 	free(output_ids);
@@ -366,7 +378,8 @@ void* create_g_q(int id, int gen, int is_output[], int num_components) {
 				decimal = 1;
 			} else {
 				if (gen) {
-					printf("ERROR: Interarrival time of generator should be a number");
+					printf(
+							"ERROR: Interarrival time of generator should be a number");
 				} else {
 					printf(
 							"ERROR: Service time of queuing station should be a number");
