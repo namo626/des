@@ -62,32 +62,37 @@ int config(double time, char* configfile, char* outfile) {
 	while (buffer[i] != '\0' && buffer[i] != '\n' && buffer[i] != EOF) {
 		if (!isdigit(buffer[i])) {
 			printf(
-					"Error: The first line of the config file is not an integer");
+					"ERROR: The first line of the config file is not an integer");
 			fclose(ifp);
 			free(ifp);
+			free(buffer);
 			return 1;
 		}
 		i++;
 	}
 	num_components = strtol(buffer, (char **) NULL, 10);
 	initialize(num_components);
-	printf("Simulator initialized. Number of components: %d\n\n",
+	printf("Simulator initialized...\nNumber of components: %d\n\n",
 			num_components);
 
 	//Read the rest of the file
 	if (!(read_file(ifp, num_components) == NULL)) {
 		//All components added successfully, run simulation
+		printf("Running simulation...\n");
 		runSim(time);
+		free(ifp);
+		free(buffer);
 		return 0;
 	} else {
 		//There was an error
+		free(ifp);
+		free(buffer);
 		return 1;
 	}
 }
 
 void* read_file(FILE* ifp, int num_components) {
 	//Arrays for error checking
-	//int *has_id = malloc(num_components * sizeof(int));
 	int has_id[num_components];
 	int is_output[num_components];
 	int is_generator[num_components];
@@ -235,7 +240,6 @@ void *read_line(char* buffer, int num_components, int has_id[], int is_output[],
 			}
 		}
 	}
-
 	return ((void*) 1);
 }
 
@@ -255,6 +259,10 @@ void* create_fork(int id, int is_output[], int num_components) {
 
 	//Probabilities
 	double* probabilities = malloc(num_ports * sizeof(double));
+	if(probabilities == NULL){
+		printf("Failed to allocate memory");
+		return NULL;
+	}
 	for (int count = 0; count < num_ports; count++) {
 		int decimal = 0;
 		split = strtok(NULL, " ");
@@ -288,6 +296,10 @@ void* create_fork(int id, int is_output[], int num_components) {
 
 	//Output ids
 	int *output_ids = malloc(num_ports * sizeof(int));
+	if(output_ids == NULL){
+		printf("Failed to allocate memory");
+		return NULL;
+	}
 	for (int count = 0; count < num_ports; count++) {
 		split = strtok(NULL, " ");
 		if (split == NULL) {
@@ -300,6 +312,8 @@ void* create_fork(int id, int is_output[], int num_components) {
 		while (i < strlen(split)) {
 			if (!isdigit(split[i])) {
 				printf("ERROR: Output ports for fork must be a number");
+				free(probabilities);
+				free(output_ids);
 				return NULL;
 			}
 			i++;
@@ -316,9 +330,9 @@ void* create_fork(int id, int is_output[], int num_components) {
 		printf("Output id %d: %d\n", count, output_ids[count]);
 	}
 	if (strtok(NULL, " ") != NULL) {
+		printf("ERROR: Too many arguments for fork component");
 		free(probabilities);
 		free(output_ids);
-		printf("ERROR: Too many arguments for fork component");
 		return NULL;
 	}
 	addFork(id, probabilities, output_ids);
