@@ -9,12 +9,13 @@
  * Functions
  */
 int config(double time, char* configfile, char* outfile);
-void* read_file(FILE* ifp);
-void *read_line(char* buffer);
+void *read_file(FILE* ifp, int num_components);
+void *read_line(char* buffer, int num_components, int has_id[], int is_output[],
+		int is_generator[]);
 int get_id(char* buffer);
 char get_component_type(char* buffer);
-void *create_g_q(int id, int gen);
-void *create_fork(int id);
+void *create_g_q(int id, int gen, int is_output[], int num_components);
+void *create_fork(int id, int is_output[], int num_components);
 
 /*
  * Runs simulation
@@ -74,8 +75,9 @@ int config(double time, char* configfile, char* outfile) {
 			num_components);
 
 	//Read the rest of the file
-	if (!(read_file(ifp) == NULL)) {
-		//Success
+	if (!(read_file(ifp, num_components) == NULL)) {
+		//All components added successfully, run simulation
+		runSim(time);
 		return 0;
 	} else {
 		//There was an error
@@ -83,7 +85,18 @@ int config(double time, char* configfile, char* outfile) {
 	}
 }
 
-void* read_file(FILE* ifp) {
+void* read_file(FILE* ifp, int num_components) {
+	//Arrays for error checking
+	//int *has_id = malloc(num_components * sizeof(int));
+	int has_id[num_components];
+	int is_output[num_components];
+	int is_generator[num_components];
+	for (int i = 0; i < num_components; i++) {
+		has_id[i] = 0;
+		is_output[i] = 0;
+		is_generator[i] = 0;
+	}
+
 	int max_buf = 1000;
 	char *buffer = malloc(sizeof(char) * max_buf);
 	if (buffer == NULL) {
@@ -118,7 +131,8 @@ void* read_file(FILE* ifp) {
 		buffer[buf_length - 1] = '\0';
 
 		//Read line of buffer
-		if (read_line(buffer) == NULL) {
+		if (read_line(buffer, num_components, has_id, is_output,
+				is_generator) == NULL) {
 			fclose(ifp);
 			free(ifp);
 			free(buffer);
@@ -128,14 +142,15 @@ void* read_file(FILE* ifp) {
 		//New line/buffer
 		buf_length = 0;
 	}
-
 	fclose(ifp);
 	free(ifp);
 	free(buffer);
 	return ((void*) 1);
 }
 
-void *read_line(char* buffer) {
+void *read_line(char* buffer, int num_components, int has_id[], int is_output[],
+		int is_generator[]) {
+
 	char *split = strtok(buffer, " ");
 	int id;
 	char component_type;
@@ -148,6 +163,15 @@ void *read_line(char* buffer) {
 			if (id == -1) {
 				return NULL;
 			}
+			if (id >= num_components) {
+				printf("ERROR: The ID of one of the components is too large");
+				return NULL;
+			}
+			if (has_id[id]) {
+				printf("ERROR: The configuration file contains two identical IDs");
+				return NULL;
+			}
+			has_id[id] = 1;
 			printf("ID: %d\n", id);
 		}
 		if (count == 1) {
@@ -168,50 +192,60 @@ void *read_line(char* buffer) {
 		}
 	}
 	if (count != 2) {
-		printf("Missing arguments to create component");
+		printf("ERROR: Missing arguments to create component");
 		return NULL;
 	}
 
 	switch (component_type) {
 	case 'E':
 		if (strtok(NULL, " ") != NULL) {
-			printf("Exit component does not allow arguments");
+			printf("ERROR: Exit component does not allow arguments");
 			return NULL;
 		}
 		addExit(id);
 		printf("Created exit component\n\n");
 		break;
 	case 'G':
-		if (create_g_q(id, 1) == NULL) {
+		if (create_g_q(id, 1, is_output, num_components) == NULL) {
 			return NULL;
 		}
+		is_generator[id] = 1;
 		break;
 	case 'Q':
-		if (create_g_q(id, 0) == NULL) {
+		if (create_g_q(id, 0, is_output, num_components) == NULL) {
 			return NULL;
 		}
 		break;
 	case 'F':
-		if (create_fork(id) == NULL) {
+		if (create_fork(id, is_output, num_components) == NULL) {
 			return NULL;
 		}
 		break;
 	default:
-		printf("Something went wrong");
+		printf("ERROR: Something went wrong");
 		return NULL;
 		break;
+	}
+	//Check output IDs
+	for (int i = 0; i < num_components; i++) {
+		if (is_output[i]) {
+			if (is_generator[i]) {
+				printf("ERROR: Output ID can't be the ID of a generator");
+				return NULL;
+			}
+		}
 	}
 
 	return ((void*) 1);
 }
 
-void* create_fork(int id) {
+void* create_fork(int id, int is_output[], int num_components) {
 	char *split = strtok(NULL, " ");
 	int i = 0;
 	int num_ports;
 	while (i < strlen(split)) {
 		if (!isdigit(split[i])) {
-			printf("Number of output ports must be an integer");
+			printf("ERROR: Number of output ports must be an integer");
 			return NULL;
 		}
 		i++;
@@ -225,7 +259,7 @@ void* create_fork(int id) {
 		int decimal = 0;
 		split = strtok(NULL, " ");
 		if (split == NULL) {
-			printf("Not enough arguments for fork");
+			printf("ERROR: Not enough arguments for fork");
 			free(probabilities);
 			return NULL;
 		}
@@ -235,7 +269,8 @@ void* create_fork(int id) {
 				if (!decimal && split[i] == '.') {
 					decimal = 1;
 				} else {
-					printf("Probabilities for fork must be a number");
+					printf("ERROR: Probabilities for fork must be a number");
+					free(probabilities);
 					return NULL;
 				}
 			}
@@ -243,7 +278,8 @@ void* create_fork(int id) {
 		}
 		if (split[i - 1] == '.') {
 			//Nothing comes after the decimal point
-			printf("Probabilities of fork are not valid");
+			printf("ERROR: Probabilities of fork are not valid");
+			free(probabilities);
 			return NULL;
 		}
 		probabilities[count] = strtod(split, (char**) NULL);
@@ -255,7 +291,7 @@ void* create_fork(int id) {
 	for (int count = 0; count < num_ports; count++) {
 		split = strtok(NULL, " ");
 		if (split == NULL) {
-			printf("Not enough arguments for fork");
+			printf("ERROR: Not enough arguments for fork");
 			free(output_ids);
 			free(probabilities);
 			return NULL;
@@ -263,18 +299,26 @@ void* create_fork(int id) {
 		int i = 0;
 		while (i < strlen(split)) {
 			if (!isdigit(split[i])) {
-				printf("Output ports for fork must be a number");
+				printf("ERROR: Output ports for fork must be a number");
 				return NULL;
 			}
 			i++;
 		}
-		output_ids[count] = strtod(split, (char**) NULL);
+		int output_id = strtol(split, (char**) NULL, 10);
+		if (output_id >= num_components) {
+			printf("ERROR: Output ID of fork does not exist");
+			free(probabilities);
+			free(output_ids);
+			return NULL;
+		}
+		output_ids[count] = output_id;
+		is_output[output_id] = 1;
 		printf("Output id %d: %d\n", count, output_ids[count]);
 	}
 	if (strtok(NULL, " ") != NULL) {
 		free(probabilities);
 		free(output_ids);
-		printf("Too many arguments for fork component");
+		printf("ERROR: Too many arguments for fork component");
 		return NULL;
 	}
 	addFork(id, probabilities, output_ids);
@@ -288,15 +332,15 @@ void* create_fork(int id) {
  * Creates generator or queuing station, int gen indicates which one.
  * 1 = generator, 0 = queuing station
  */
-void* create_g_q(int id, int gen) {
+void* create_g_q(int id, int gen, int is_output[], int num_components) {
 	char *split = strtok(NULL, " ");
 	if (split == NULL) {
 		if (gen) {
 			printf(
-					"Generator needs an average interarrival time and an output ID");
+					"ERROR: Generator needs an average interarrival time and an output ID");
 		} else {
 			printf(
-					"Queuing station needs an average service time and an output ID");
+					"ERROR: Queuing station needs an average service time and an output ID");
 		}
 		return NULL;
 	}
@@ -308,10 +352,10 @@ void* create_g_q(int id, int gen) {
 				decimal = 1;
 			} else {
 				if (gen) {
-					printf("Interarrival time of generator should be a number");
+					printf("ERROR: Interarrival time of generator should be a number");
 				} else {
 					printf(
-							"Interarrival time of queuing station should be a number");
+							"ERROR: Interarrival time of queuing station should be a number");
 				}
 				return NULL;
 			}
@@ -321,9 +365,9 @@ void* create_g_q(int id, int gen) {
 	if (split[i - 1] == '.') {
 		//Nothing comes after the decimal point
 		if (gen) {
-			printf("Interarrival time of generator is incorrect");
+			printf("ERROR: Interarrival time of generator is incorrect");
 		} else {
-			printf("Service time of queuing station is incorrect");
+			printf("ERROR: Service time of queuing station is incorrect");
 		}
 		return NULL;
 	}
@@ -333,10 +377,10 @@ void* create_g_q(int id, int gen) {
 	if (split == NULL) {
 		if (gen) {
 			printf(
-					"Generator needs an average interarrival time and an output ID");
+					"ERROR: Generator needs an average interarrival time and an output ID");
 		} else {
 			printf(
-					"Queuing station needs an average service time and an output ID");
+					"ERROR: Queuing station needs an average service time and an output ID");
 		}
 		return NULL;
 	}
@@ -345,9 +389,9 @@ void* create_g_q(int id, int gen) {
 	while (i < strlen(split)) {
 		if (!isdigit(split[i])) {
 			if (gen) {
-				printf("Output ID of generator must be a number");
+				printf("ERROR: Output ID of generator must be a number");
 			} else {
-				printf("Output ID of queuing station must be a number");
+				printf("ERROR: Output ID of queuing station must be a number");
 			}
 			return NULL;
 		}
@@ -355,14 +399,24 @@ void* create_g_q(int id, int gen) {
 	}
 	if (strtok(NULL, " ") != NULL) {
 		if (gen) {
-			printf("Too many arguments to generator component");
+			printf("ERROR: Too many arguments to generator component");
 			return NULL;
 		} else {
-			printf("Too many arguments for queuing station component");
+			printf("ERROR: Too many arguments for queuing station component");
 			return NULL;
 		}
 	}
 	output_id = strtol(split, (char**) NULL, 10);
+	if (output_id >= num_components) {
+		if (gen) {
+			printf("ERROR: Output ID of generator does not exist");
+			return NULL;
+		} else {
+			printf("ERROR: Output ID of queuing station does not exist");
+			return NULL;
+		}
+	}
+	is_output[output_id] = 1;
 	printf("Output ID: %d\n", output_id);
 	if (gen) {
 		addGen(id, time, output_id);
@@ -382,7 +436,7 @@ int get_id(char* buffer) {
 	int i = 0;
 	while (i < strlen(buffer)) {
 		if (!isdigit(buffer[i])) {
-			printf("Error: Each line must start with component ID");
+			printf("ERROR: Each line must start with component ID");
 			return -1;
 		}
 		i++;
@@ -392,14 +446,14 @@ int get_id(char* buffer) {
 
 char get_component_type(char* buffer) {
 	if (strlen(buffer) > 1) {
-		printf("Component type should only be one letter");
+		printf("ERROR: Component type should only be one letter");
 		return '\0';
 	}
 	char ch = buffer[0];
 	if (ch == 'G' || ch == 'E' || ch == 'Q' || ch == 'F') {
 		return ch;
 	} else {
-		printf("Component type does not exist (%c)", ch);
+		printf("ERROR: Component type does not exist (%c)", ch);
 		return '\0';
 	}
 }
