@@ -27,8 +27,20 @@ void addStation(int id, double avgServeTime, int outputID);
 
 /* Add a Fork component
  */
-void addFork(int id, double* probabilities, int* outputIDs);
+void addFork(int id, int count, double* probabilities, int* outputIDs);
 
 /* Run the simulation, modifying state
  */
-void runSim();
+void runSim(double time);
+
+/* Print to statistics of the global state (overwriting the file)
+ * Number of enters and exits, max, min, avg total waiting times of all customers, and
+ * number of components
+ */
+void networkReport(char* filename);
+
+/* Print the statistics of a chosen component (appending to the file)
+ * This only prints statistics for Station and Exit components, and does nothing
+ * when the given component is of any other type.
+ */
+void printReport(int id, char* filename);
