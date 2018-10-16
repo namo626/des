@@ -76,3 +76,21 @@ double minWaitTime(CustList* clist) {
 
   return min;
 }
+
+double avgWaitTime(CustList* clist) {
+  CustNode* head = clist->firstCust;
+
+  // list is empty
+  if (head == NULL) {
+    return 0.0;
+  }
+
+  double sum = 0;
+  CustNode* current = head;
+  while (current != NULL) {
+    sum = sum + totalWait(current->cust);
+    current = current->nextCust;
+  }
+
+  return sum / (clist->amount);
+}

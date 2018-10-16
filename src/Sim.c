@@ -44,6 +44,7 @@ typedef struct Network {
   int num_components; // should be fixed
   Component** components;
   CustList* entered; // a list containing all the customers who have entered
+  int totalExits; // count of TOTAL exits
 } Network;
 
 
@@ -105,16 +106,22 @@ void recordEnter(Customer* customer) {
   insertCust(NETWORK->entered, customer);
 }
 
+void incTotalExit() {
+  NETWORK->totalExits++;
+}
+
 void networkReport(char* filename) {
   FILE* f = fopen(filename, "w");
   if (f == NULL) {
     printf("Creating a new file\n");
   }
-  fprintf(f, " Stats for the whole network\n");
-  fprintf(f, " No. of components in system: %d\n", NETWORK->num_components);
-  fprintf(f, " No. of customers entered: %d\n", custCount(NETWORK->entered));
-  fprintf(f, " Max total wait time among customers: %.1f\n", maxWaitTime(NETWORK->entered));
-  fprintf(f, " Min total wait time among customers: %.1f\n", minWaitTime(NETWORK->entered));
+  fprintf(f, "Stats for the whole network\n");
+  fprintf(f, "  No. of components in system: %d\n", NETWORK->num_components);
+  fprintf(f, "  No. of customers entered: %d\n", custCount(NETWORK->entered));
+  fprintf(f, "  No. of customers exited: %d\n", NETWORK->totalExits);
+  fprintf(f, "  Max total wait time among customers: %.1f\n", maxWaitTime(NETWORK->entered));
+  fprintf(f, "  Min total wait time among customers: %.1f\n", minWaitTime(NETWORK->entered));
+  fprintf(f, "  Avg total wait time among customers: %.1f\n", avgWaitTime(NETWORK->entered));
 
   fprintf(f, "\n");
   fclose(f);
@@ -143,6 +150,7 @@ void addExit(int id) {
 // add an exiting customer
 void recordExit(Exit* exit, double time, Customer* c) {
   exit->exited++;
+  incTotalExit();
   double duration = time - (c->createTime);
   exit->totalTime = exit->totalTime + duration;
 
@@ -173,10 +181,10 @@ void exitReport(Exit* exit, int id, char* filename) {
     printf("Creating a new file\n");
   }
   fprintf(f, "Stats of Exit (id = %d)\n", id);
-  fprintf(f, " Number of customers exited: %d\n", exit->exited);
-  fprintf(f, " Min time in the system: %.1f\n", exit->minTime);
-  fprintf(f, " Max time in the system: %.1f\n", exit->maxTime);
-  fprintf(f, " Avg time in the system: %.1f\n", avgDuration(exit));
+  fprintf(f, "  Number of customers exited: %d\n", exit->exited);
+  fprintf(f, "  Min time in the system: %.1f\n", exit->minTime);
+  fprintf(f, "  Max time in the system: %.1f\n", exit->maxTime);
+  fprintf(f, "  Avg time in the system: %.1f\n", avgDuration(exit));
   fprintf(f, "\n");
   fclose(f);
 }
@@ -217,6 +225,9 @@ double getServiceTime(Station* station) {
 
 // Draw a random wait time of the station
 double getAvgWaitTime(Station* station) {
+  if (station->inLine == 0) {
+    return 0.0;
+  }
   return (station->totalWait) / (station->inLine);
 }
 
@@ -226,9 +237,9 @@ void stationReport(Station* station, int id, char* filename) {
     printf("Creating new file\n");
   }
   fprintf(f, "Stats for Station (id = %d)\n", id);
-  fprintf(f, "Total number of instances of waiting in line: %d\n",
+  fprintf(f, "  Total number of instances of waiting in line: %d\n",
          station->inLine);
-  fprintf(f, "Average line wait time: %.1f\n", getAvgWaitTime(station));
+  fprintf(f, "  Average line wait time: %.1f\n", getAvgWaitTime(station));
   fprintf(f, "\n");
 
   fclose(f);

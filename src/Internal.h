@@ -21,6 +21,7 @@ double maxWaitTime(CustList* clist);
 
 double minWaitTime(CustList* clist);
 
+double avgWaitTime(CustList* clist);
 
 // exported by the engine
 void initFES();
