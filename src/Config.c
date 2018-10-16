@@ -90,6 +90,9 @@ int config(double time, char* configfile, char* outfile) {
 	}
 }
 
+/*
+ * Reads a configuration file and creates components accordingly
+ */
 void* read_file(FILE* ifp, int num_components) {
 	//Arrays for error checking
 	int has_id[num_components];
@@ -152,6 +155,9 @@ void* read_file(FILE* ifp, int num_components) {
 	return ((void*) 1);
 }
 
+/*
+ * Reads a line, creates the component specified on that line
+ */
 void *read_line(char* buffer, int num_components, int has_id[], int is_output[],
 		int is_generator[]) {
 
@@ -243,6 +249,9 @@ void *read_line(char* buffer, int num_components, int has_id[], int is_output[],
 	return ((void*) 1);
 }
 
+/*
+ * Creates a fork component
+ */
 void* create_fork(int id, int is_output[], int num_components) {
 	char *split = strtok(NULL, " ");
 	int i = 0;
@@ -337,10 +346,10 @@ void* create_fork(int id, int is_output[], int num_components) {
 	}
 	//Check that probabilities add up to 1
 	double sum = 0.0;
-	for(int i=0;i<num_ports;i++){
-		sum+=probabilities[i];
+	for (int i = 0; i < num_ports; i++) {
+		sum += probabilities[i];
 	}
-	if(sum!=1){
+	if (sum != 1) {
 		printf("ERROR: Probabilities of fork must add up to 1");
 		free(probabilities);
 		free(output_ids);
@@ -458,7 +467,9 @@ void* create_g_q(int id, int gen, int is_output[], int num_components) {
 	return ((void*) 1);
 }
 
-//Gets the ID of the component by reading first part of line
+/*
+ * Gets the ID of the component by reading first part of line
+ */
 int get_id(char* buffer) {
 	int i = 0;
 	while (i < strlen(buffer)) {
@@ -471,6 +482,9 @@ int get_id(char* buffer) {
 	return strtol(buffer, (char **) NULL, 10);
 }
 
+/*
+ * Gets the component type of the line
+ */
 char get_component_type(char* buffer) {
 	if (strlen(buffer) > 1) {
 		printf("ERROR: Component type should only be one letter");
