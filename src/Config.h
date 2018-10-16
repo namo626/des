@@ -10,6 +10,6 @@
 /*
  * Run sim
  */
-int config(float time, char* configfile, char* outfile);
+int config(double time, char* configfile, char* outfile);
 
 #endif /* SRC_CONFIG_H_ */

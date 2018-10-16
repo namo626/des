@@ -4,7 +4,7 @@
 
 int main(int argc, char *argv[]) {
 	if (argc == 4) {
-		float time = atof(argv[1]);
+		double time = strtod(argv[1],(char**)NULL);
 		char* configfile = argv[2];
 		char* outfile = argv[3];
 		return config(time, configfile, outfile);
