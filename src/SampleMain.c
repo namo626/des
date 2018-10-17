@@ -70,9 +70,8 @@ void study() {
   printReport(13, filename);
 
 }
-/*
-int main() {
-  sample();
-  return 0;
-}
-*/
+
+/* int main() { */
+/*   sample(); */
+/*   return 0; */
+/* } */

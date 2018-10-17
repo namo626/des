@@ -516,6 +516,9 @@ void handleArrival(Arrival* arrival) {
     schedule(mkArrival(now, port, customer), now);
     printf("  Customer arrived at fork, going to port %d\n", port);
   }
+  else {
+    printf("  ERROR: Component %d is not a Station, Fork, or Exit\n");
+  }
 }
 
 void handleDeparture(Departure* departure) {
@@ -551,7 +554,7 @@ void handleDeparture(Departure* departure) {
     printf("  Customer departed from station %d\n", departure->locationID);
   }
   else {
-    printf("Error: customer not departing from a Station\n");
+    printf("  Error: customer not departing from a Station\n");
   }
 }
 
