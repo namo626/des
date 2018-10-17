@@ -25,6 +25,11 @@ void* nextEvent(double* holder) {
   return PQ_delete(FES, holder);
 }
 
+void freeFES() {
+  PQ_free(FES);
+  FES = NULL;
+}
+
 /*************************************************************/
 /* Running the network simulation */
 
@@ -41,4 +46,5 @@ void runSim(double time) {
     // handleEvent may schedule a new event, for example
     handleEvent(event);
   }
+
 }

@@ -42,4 +42,9 @@ void* dequeue(Queue* Q);
  */
 int isEmptyQ(Queue* Q);
 
+/*
+ * Free the queue
+ */
+void freeQueue(Queue* Q);
+
 #endif

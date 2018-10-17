@@ -52,12 +52,11 @@ typedef struct Network {
 struct Customer {
   double createTime; // time at which the customer was generated
   double totalWait; // total time of waiting at the queues
-  char* name;
 
   double tempArrTime;
 };
 
-Customer* mkCustomer(char* name, double time) {
+Customer* mkCustomer(double time) {
   Customer* customer = malloc(sizeof(Customer));
   if (customer == NULL) {
     printf("Could not create a Customer\n");
@@ -65,8 +64,11 @@ Customer* mkCustomer(char* name, double time) {
   customer->createTime = time;
   customer->totalWait = 0;
   customer->tempArrTime = 0;
-  customer->name = name;
   return customer;
+}
+
+void freeCustomer(Customer* cust) {
+  free(cust);
 }
 
 double totalWait(Customer* cust) {
@@ -90,6 +92,18 @@ void initialize(int amount) {
   // initialize the event priority queue
   initFES();
 
+}
+
+int compCount() {
+  return NETWORK->num_components;
+}
+
+Component** compArray() {
+  return NETWORK->components;
+}
+
+CustList* allCustomers() {
+  return NETWORK->entered;
 }
 
 // add a component to the network
@@ -127,6 +141,7 @@ void networkReport(char* filename) {
   fclose(f);
 }
 
+
 /*************************************************************/
 /* Exit component */
 typedef struct Exit {
@@ -145,6 +160,10 @@ void addExit(int id) {
 
   Component* comp = createComp("E", exit);
   addToNetwork(id, comp);
+}
+
+void freeExit(Exit* exit) {
+  free(exit);
 }
 
 // add an exiting customer
@@ -215,6 +234,12 @@ void addStation(int id, double param, int outputID) {
 
   Component* comp = createComp("Q", station);
   addToNetwork(id, comp);
+}
+
+void freeStation(Station* station) {
+  // no need to free customers inside because they will be freed in freeSim()
+  freeQueue(station->queue);
+  free(station);
 }
 
 // Return a randomized service time
@@ -291,6 +316,12 @@ void addFork(int id, int count, double* chances, int* outports) {
 
   Component* comp = createComp("F", fork);
   addToNetwork(id, comp);
+}
+
+void freeFork(Fork* fork) {
+  free(fork->outports);
+  free(fork->chances);
+  free(fork);
 }
 
 // https://stackoverflow.com/questions/4265988/generate-random-numbers-with-a-given-numerical-distribution
@@ -427,6 +458,10 @@ void addGen(int id, double p, int outputID) {
 
 }
 
+void freeGen(Gen* gen) {
+  free(gen);
+}
+
 
 /***************************************************************/
 
@@ -434,7 +469,7 @@ void handleGeneration(Generation* gent) {
   double now = currentTime();
 
   // make a new customer now
-  Customer* c = mkCustomer("", now);
+  Customer* c = mkCustomer(now);
   recordEnter(c);
   printf("  A customer has been created\n");
 
@@ -461,7 +496,7 @@ void handleArrival(Arrival* arrival) {
     recordExit(exit, now, customer);
   }
   else if (dest->type == "Q") {
-    printf("  Customer %s arrived at station %d\n", customer->name, arrival->destID);
+    printf("  Customer arrived at station %d\n", arrival->destID);
     Station* station = dest->content;
 
     if (isEmpty(station) == TRUE) {
@@ -479,7 +514,7 @@ void handleArrival(Arrival* arrival) {
     Fork* fork = dest->content;
     int port = randomizePort(fork);
     schedule(mkArrival(now, port, customer), now);
-    printf("  Customer %s arrived at fork, going to port %d\n", customer->name, port);
+    printf("  Customer arrived at fork, going to port %d\n", port);
   }
 }
 
@@ -513,7 +548,7 @@ void handleDeparture(Departure* departure) {
       schedule(mkDeparture(leaveTime, departure->locationID),
                leaveTime);
     }
-    printf("  Customer %s departed\n", customer->name);
+    printf("  Customer departed from station %d\n", departure->locationID);
   }
   else {
     printf("Error: customer not departing from a Station\n");
@@ -557,4 +592,48 @@ void printReport(int id, char* filename) {
     exitReport(exit, id, filename);
   }
 
+}
+
+/***********************************************************************/
+/* Freeing all the components */
+void freeSim() {
+  // free each component in the global component array
+  int amount = compCount();
+  Component** comps = compArray();
+
+  for (int i = 0; i < amount; i++) {
+    Component* comp = comps[i];
+    if (comp->type == "F") {
+      printf("Freeing component %d (Fork)\n", i);
+      freeFork(comp->content);
+    }
+    else if (comp->type == "G") {
+      printf("Freeing component %d (Gen)\n", i);
+      freeGen(comp->content);
+    }
+    else if (comp->type == "E") {
+      printf("Freeing component %d (Exit)\n", i);
+      freeExit(comp->content);
+    }
+    else if (comp->type == "Q") {
+      printf("Freeing component %d (Station)\n", i);
+      freeStation(comp->content);
+    }
+    free(comp);
+  }
+  // free the global array itself
+  free(comps);
+  printf("Freed all components\n");
+
+  // free the global customer list
+  freeCustList(allCustomers());
+  printf("Freed all customers\n");
+
+  // free the global network struct
+  free(NETWORK);
+  printf("Freed the whole network\n");
+
+  // finally, free the FEL
+  freeFES();
+  printf("Freed the FEL\n");
 }
