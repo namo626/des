@@ -401,8 +401,7 @@ typedef struct Gen {
 // Return a random arrival time (duration)
 double getGenTime(Gen* gen) {
   double meanTime = gen->avgArrivalTime;
-  //  return randexp(meanTime);
-  return meanTime;
+  return randexp(meanTime);
 }
 
 // create and add a generator component to the global network
