@@ -79,7 +79,9 @@ int config(double time, char* configfile, char* outfile) {
 		printf("Running simulation...\n");
 		runSim(time);
 		networkReport(outfile);
-		printReport(5,outfile);
+		for(int i=0;i<num_components;i++){
+			printReport(i,outfile);
+		}
 		fclose(ifp);
 		free(buffer);
 		return 0;
