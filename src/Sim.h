@@ -44,3 +44,7 @@ void networkReport(char* filename);
  * when the given component is of any other type.
  */
 void printReport(int id, char* filename);
+
+/* Free the whole simulation
+ */
+void freeSim();

@@ -45,6 +45,20 @@ Queue* mkQueue() {
   return Q;
 }
 
+void freeQueue(Queue* Q) {
+  QElem* head = Q->first;
+  QElem* tmp;
+
+  while (head != NULL) {
+    tmp = head;
+    head = head->nextElem;
+    //    free(tmp->elem);
+    free(tmp);
+  }
+
+  free(Q);
+}
+
 int enqueue(Queue* Q, void* E) {
   QElem* new = mkQElem(E);
   if (new == NULL) {

@@ -30,6 +30,22 @@ CustList* mkCustList() {
   new->firstCust = NULL;
 }
 
+void freeCustList(CustList* clist) {
+  CustNode* head = clist->firstCust;
+  CustNode* tmp;
+
+  while (head != NULL) {
+    tmp = head;
+    head = head->nextCust;
+    freeCustomer(tmp->cust);
+    free(tmp);
+  }
+
+  free(clist);
+}
+
+
+
 void insertCust(CustList* clist, Customer* cust) {
   CustNode* new = mkCustNode(cust);
   new->nextCust = clist->firstCust;
