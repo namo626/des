@@ -79,6 +79,7 @@ int config(double time, char* configfile, char* outfile) {
 		printf("Running simulation...\n");
 		runSim(time);
 		networkReport(outfile);
+		printReport(5,outfile);
 		fclose(ifp);
 		free(buffer);
 		return 0;
@@ -179,7 +180,6 @@ void *read_line(char* buffer, int num_components, int has_id[], int is_output[],
 				return NULL;
 			}
 			has_id[id] = 1;
-			printf("ID: %d\n", id);
 		}
 		if (count == 1) {
 			//Component type
@@ -187,7 +187,7 @@ void *read_line(char* buffer, int num_components, int has_id[], int is_output[],
 			if (component_type == '\0') {
 				return NULL;
 			}
-			printf("Component type: %c\n", component_type);
+
 		}
 		count++;
 		if (count < 2) {
@@ -209,6 +209,7 @@ void *read_line(char* buffer, int num_components, int has_id[], int is_output[],
 			printf("ERROR: Exit component does not allow arguments");
 			return NULL;
 		}
+		printf("ID: %d\n", id);
 		addExit(id);
 		printf("Created exit component\n\n");
 		break;
@@ -260,14 +261,14 @@ void* create_fork(int id, int is_output[], int num_components) {
 		i++;
 	}
 	num_ports = strtol(split, (char**) NULL, 10);
-	printf("Number of output ports: %d\n", num_ports);
 
 	//Probabilities
 	double* probabilities = malloc(num_ports * sizeof(double));
-	if (probabilities == NULL) {
-		printf("Failed to allocate memory");
-		return NULL;
-	}
+		if (probabilities == NULL) {
+			printf("Failed to allocate memory");
+			return NULL;
+		}
+
 	for (int count = 0; count < num_ports; count++) {
 		int decimal = 0;
 		split = strtok(NULL, " ");
@@ -296,15 +297,15 @@ void* create_fork(int id, int is_output[], int num_components) {
 			return NULL;
 		}
 		probabilities[count] = strtod(split, (char**) NULL);
-		printf("Probability %d: %f\n", count, probabilities[count]);
 	}
 
 	//Output ids
 	int *output_ids = malloc(num_ports * sizeof(int));
-	if (output_ids == NULL) {
-		printf("Failed to allocate memory");
-		return NULL;
-	}
+		if (output_ids == NULL) {
+			printf("Failed to allocate memory");
+			return NULL;
+		}
+
 	for (int count = 0; count < num_ports; count++) {
 		split = strtok(NULL, " ");
 		if (split == NULL) {
@@ -332,7 +333,6 @@ void* create_fork(int id, int is_output[], int num_components) {
 		}
 		output_ids[count] = output_id;
 		is_output[output_id] = 1;
-		printf("Output id %d: %d\n", count, output_ids[count]);
 	}
 	if (strtok(NULL, " ") != NULL) {
 		printf("ERROR: Too many arguments for fork component");
@@ -352,10 +352,15 @@ void* create_fork(int id, int is_output[], int num_components) {
 		return NULL;
 	}
 
+	printf("ID: %d\n", id);
+	printf("Number of output ports: %d\n", num_ports);
+	for(int count=0;count<num_ports;count++){
+		printf("Probability %d: %f\n", count, probabilities[count]);
+		printf("Output id %d: %d\n", count, output_ids[count]);
+	}
+
 	addFork(id, num_ports, probabilities, output_ids);
 	printf("Created fork component\n\n");
-	free(probabilities);
-	free(output_ids);
 	return ((void*) 1);
 }
 
@@ -404,7 +409,6 @@ void* create_g_q(int id, int gen, int is_output[], int num_components) {
 		return NULL;
 	}
 	double time = strtod(split, (char **) NULL);
-	printf("Interarrival time: %f\n", time);
 	split = strtok(NULL, " ");
 	if (split == NULL) {
 		if (gen) {
@@ -449,6 +453,14 @@ void* create_g_q(int id, int gen, int is_output[], int num_components) {
 		}
 	}
 	is_output[output_id] = 1;
+
+	printf("ID: %d\n", id);
+	if(gen){
+		printf("Component type: G\n");
+	} else {
+		printf("Component type: Q\n");
+	}
+	printf("Time: %f\n", time);
 	printf("Output ID: %d\n", output_id);
 	if (gen) {
 		addGen(id, time, output_id);
