@@ -3,10 +3,10 @@
 #include "PrioQ.h"
 #include "List.h"
 
-typedef struct PrioQ {
+struct PrioQ {
   List* list;
   unsigned int count;
-} PrioQ;
+};
 
 
 PrioQ* PQ_create() {
