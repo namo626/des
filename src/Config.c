@@ -57,7 +57,8 @@ int config(double time, char* configfile, char* outfile) {
 		buf_length++;
 	}
 	int i = 0;
-	while (buffer[i] != '\0' && buffer[i] != '\n') {
+	while (buffer[i] != '\0' && buffer[i] != '\n' && buffer[i] != EOF) {
+		printf("%d\n", i);
 		if (!isdigit(buffer[i])) {
 			printf(
 					"ERROR: The first line of the config file is not an integer");
@@ -67,6 +68,7 @@ int config(double time, char* configfile, char* outfile) {
 		}
 		i++;
 	}
+	exit(0);
 	num_components = strtol(buffer, (char **) NULL, 10);
 	initialize(num_components);
 	printf("Simulator initialized...\nNumber of components: %d\n\n",
