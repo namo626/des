@@ -1,4 +1,7 @@
 #include "Sim.h"
+#include <stdlib.h>
+#include <time.h>
+
 
 // For study() only
 #define forks 5
@@ -7,6 +10,7 @@
 
 // Sample config
 void sample() {
+  srand(time(NULL));
   initialize(6);
   double chances[4] = {0.3, 0.2, 0.4, 0.1};
   int ports[4] = {3, 4, 5, 1};
@@ -22,6 +26,7 @@ void sample() {
 
   networkReport("report.txt");
   printReport(5, "report.txt");
+  printReport(3, "report.txt");
 }
 
 // Sample study system
@@ -71,7 +76,7 @@ void study() {
 
 }
 
-/* int main() { */
-/*   sample(); */
-/*   return 0; */
-/* } */
+int main() {
+  sample();
+  return 0;
+}
