@@ -56,16 +56,14 @@ int config(double time, char* configfile, char* outfile) {
 		buffer[buf_length] = ch;
 		buf_length++;
 	}
-
 	printf("buffer: %s\n", buffer);
 	int i = 0;
-	while (buffer[i] != '\0' && buffer[i] != '\n' && buffer[i] != EOF) {
+	while (i < strlen(buffer)-2) {
 		printf("i: %d\n", i);
 		printf("c: %c\n", buffer[i]);
 		if (!isdigit(buffer[i])) {
 			printf(
 					"ERROR: The first line of the config file is not an integer");
-			fclose(ifp);
 			free(buffer);
 			return 1;
 		}
@@ -87,13 +85,11 @@ int config(double time, char* configfile, char* outfile) {
 			printReport(i, outfile);
 			printf("Printing report for component with ID: %d\n", i);
 		}
-		fclose(ifp);
 		free(buffer);
 		freeSim();
 		return 0;
 	} else {
 		//There was an error
-		fclose(ifp);
 		free(buffer);
 		return 1;
 	}
@@ -148,7 +144,6 @@ void* read_file(FILE* ifp, int num_components) {
 		if (read_line(buffer, num_components, has_id, is_output,
 				is_generator) == NULL) {
 			//There was an error
-			fclose(ifp);
 			free(buffer);
 			return NULL;
 		}
@@ -156,7 +151,6 @@ void* read_file(FILE* ifp, int num_components) {
 		//New line/buffer
 		buf_length = 0;
 	}
-	fclose(ifp);
 	free(buffer);
 	return ((void*) 1);
 }
@@ -283,7 +277,7 @@ void* create_fork(int id, int is_output[], int num_components) {
 		split = strtok(NULL, " ");
 		if (split == NULL) {
 			printf("ERROR: Not enough arguments for fork");
-			free(probabilities);
+			freeSim();
 			return NULL;
 		}
 		int i = 0;
@@ -293,7 +287,7 @@ void* create_fork(int id, int is_output[], int num_components) {
 					decimal = 1;
 				} else {
 					printf("ERROR: Probabilities for fork must be a number");
-					free(probabilities);
+					freeSim();
 					return NULL;
 				}
 			}
@@ -302,7 +296,7 @@ void* create_fork(int id, int is_output[], int num_components) {
 		if (split[i - 1] == '.') {
 			//Nothing comes after the decimal point
 			printf("ERROR: Probabilities of fork are not valid");
-			free(probabilities);
+			freeSim();
 			return NULL;
 		}
 		probabilities[count] = strtod(split, (char**) NULL);
@@ -319,16 +313,14 @@ void* create_fork(int id, int is_output[], int num_components) {
 		split = strtok(NULL, " ");
 		if (split == NULL) {
 			printf("ERROR: Not enough arguments for fork");
-			free(output_ids);
-			free(probabilities);
+			freeSim();
 			return NULL;
 		}
 		int i = 0;
-		while (i < strlen(split)) {
+		while (i < strlen(split)-1) {
 			if (!isdigit(split[i])) {
 				printf("ERROR: Output ports for fork must be a number");
-				free(probabilities);
-				free(output_ids);
+				freeSim();
 				return NULL;
 			}
 			i++;
@@ -336,8 +328,7 @@ void* create_fork(int id, int is_output[], int num_components) {
 		int output_id = strtol(split, (char**) NULL, 10);
 		if (output_id >= num_components) {
 			printf("ERROR: Output ID of fork does not exist");
-			free(probabilities);
-			free(output_ids);
+			freeSim();
 			return NULL;
 		}
 		output_ids[count] = output_id;
@@ -345,8 +336,7 @@ void* create_fork(int id, int is_output[], int num_components) {
 	}
 	if (strtok(NULL, " ") != NULL) {
 		printf("ERROR: Too many arguments for fork component");
-		free(probabilities);
-		free(output_ids);
+		freeSim();
 		return NULL;
 	}
 	//Check that probabilities add up to 1
@@ -356,8 +346,7 @@ void* create_fork(int id, int is_output[], int num_components) {
 	}
 	if (sum != 1) {
 		printf("ERROR: Probabilities of fork must add up to 1");
-		free(probabilities);
-		free(output_ids);
+		freeSim();
 		return NULL;
 	}
 
@@ -431,7 +420,7 @@ void* create_g_q(int id, int gen, int is_output[], int num_components) {
 	}
 	i = 0;
 	int output_id;
-	while (i < strlen(split)) {
+	while (i < strlen(split)-1) {
 		if (!isdigit(split[i])) {
 			if (gen) {
 				printf("ERROR: Output ID of generator must be a number");
