@@ -162,13 +162,16 @@ void* read_file(FILE* ifp, int num_components) {
  */
 void *read_line(char* buffer, int num_components, int has_id[], int is_output[],
 		int is_generator[]) {
-
+	if(buffer[0] == '\0'){
+		//Empty line, skip
+		return ((void*)1);
+	}
 	char *split = strtok(buffer, " ");
 	int id;
 	char component_type;
 	int count = 0;
 	//Get ID and component type
-	while (split != NULL || split[0] != '\n') {
+	while (split != NULL) {
 		if (count == 0) {
 			//ID
 			id = get_id(split);
