@@ -56,6 +56,7 @@ int config(double time, char* configfile, char* outfile) {
 		buffer[buf_length] = ch;
 		buf_length++;
 	}
+	buffer[buf_length-1] = '\0';
 	printf("buffer: %s", buffer);
 	int i = 0;
 	while (buffer[i] != '\0' && buffer[i] != '\n' && buffer[i] != EOF) {
