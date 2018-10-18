@@ -21,7 +21,7 @@ void sample() {
   runSim(1000);
 
   networkReport("report.txt");
-  printReport(5, "report.txt");
+  printReport(3, "report.txt");
 }
 
 // Sample study system
@@ -70,8 +70,9 @@ void study() {
   printReport(13, filename);
 
 }
-
-/* int main() { */
-/*   sample(); */
-/*   return 0; */
-/* } */
+/*
+ int main() {
+   sample();
+   return 0;
+ }
+*/
