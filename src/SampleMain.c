@@ -42,7 +42,7 @@ void study() {
   initialize(15);
 
   // Generator
-  addGen(0, 0.1, 13);
+  addGen(0, 0.1, 1);
   // Station (tray)
   addStation(1, 0.2, 2);
   // Fork to different restaurants
@@ -56,14 +56,13 @@ void study() {
   // 2 beverage stations
   addFork(8, drinks, dp, dout);
   addStation(9, 1.0, 11);
-  addStation(10, 1.0, 14);
+  addStation(10, 1.0, 11);
 
   // checkout station which forks to exit or the restaurant fork
   addStation(11, 1.0, 13);
   addFork(12, checkout, cp, cout);
   addExit(13);
 
-  addStation(14, 1.0, 13);
 
   runSim(50);
 

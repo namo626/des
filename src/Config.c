@@ -87,10 +87,12 @@ int config(double time, char* configfile, char* outfile) {
 		}
 		free(buffer);
 		freeSim();
+                fclose(ifp);
 		return 0;
 	} else {
 		//There was an error
 		free(buffer);
+                fclose(ifp);
 		return 1;
 	}
 }
@@ -166,7 +168,7 @@ void *read_line(char* buffer, int num_components, int has_id[], int is_output[],
 	char component_type;
 	int count = 0;
 	//Get ID and component type
-	while (split != NULL) {
+	while (split != NULL || split[0] != '\n') {
 		if (count == 0) {
 			//ID
 			id = get_id(split);
@@ -492,7 +494,7 @@ int get_id(char* buffer) {
  * Gets the component type of the line
  */
 char get_component_type(char* buffer) {
-	if (strlen(buffer) > 1) {
+	if (strlen(buffer) - 1 > 1) {
 		printf("ERROR: Component type should only be one letter");
 		return '\0';
 	}
