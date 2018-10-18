@@ -33,9 +33,9 @@ int config(double time, char* configfile, char* outfile) {
 		//Malloc failed
 		printf("Failed to allocate memory");
 		fclose(ifp);
-
 		return 1;
 	}
+	memset(buffer, 0, 1000);
 
 	//Get first line of input file, which is number of components
 	int num_components;
@@ -56,9 +56,11 @@ int config(double time, char* configfile, char* outfile) {
 		buffer[buf_length] = ch;
 		buf_length++;
 	}
+	printf("buffer: %s", buffer);
 	int i = 0;
 	while (buffer[i] != '\0' && buffer[i] != '\n' && buffer[i] != EOF) {
-		printf("%d\n", i);
+		printf("i: %d\n", i);
+		printf("c: %c\n", buffer[i]);
 		if (!isdigit(buffer[i])) {
 			printf(
 					"ERROR: The first line of the config file is not an integer");
@@ -68,7 +70,6 @@ int config(double time, char* configfile, char* outfile) {
 		}
 		i++;
 	}
-	exit(0);
 	num_components = strtol(buffer, (char **) NULL, 10);
 	initialize(num_components);
 	printf("Simulator initialized...\nNumber of components: %d\n\n",
