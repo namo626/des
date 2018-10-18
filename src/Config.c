@@ -49,7 +49,6 @@ int config(double time, char* configfile, char* outfile) {
 				//Realloc failed
 				printf("Failed to allocate memory (reallocation)");
 				fclose(ifp);
-
 				return 1;
 			}
 		}
@@ -58,7 +57,7 @@ int config(double time, char* configfile, char* outfile) {
 		buf_length++;
 	}
 	int i = 0;
-	while (buffer[i] != '\0' && buffer[i] != '\n' && buffer[i] != EOF) {
+	while (buffer[i] != '\0' && buffer[i] != '\n') {
 		if (!isdigit(buffer[i])) {
 			printf(
 					"ERROR: The first line of the config file is not an integer");
@@ -78,12 +77,15 @@ int config(double time, char* configfile, char* outfile) {
 		//All components added successfully, run simulation
 		printf("Running simulation...\n");
 		runSim(time);
+		printf("Finished running simulation...\n");
 		networkReport(outfile);
-		for(int i=0;i<num_components;i++){
-			printReport(i,outfile);
+		for (int i = 0; i < num_components; i++) {
+			printReport(i, outfile);
+			printf("Printing report for component with ID: %d\n", i);
 		}
 		fclose(ifp);
 		free(buffer);
+		freeSim();
 		return 0;
 	} else {
 		//There was an error
@@ -141,6 +143,7 @@ void* read_file(FILE* ifp, int num_components) {
 		//Read line of buffer
 		if (read_line(buffer, num_components, has_id, is_output,
 				is_generator) == NULL) {
+			//There was an error
 			fclose(ifp);
 			free(buffer);
 			return NULL;
@@ -266,10 +269,10 @@ void* create_fork(int id, int is_output[], int num_components) {
 
 	//Probabilities
 	double* probabilities = malloc(num_ports * sizeof(double));
-		if (probabilities == NULL) {
-			printf("Failed to allocate memory");
-			return NULL;
-		}
+	if (probabilities == NULL) {
+		printf("Failed to allocate memory");
+		return NULL;
+	}
 
 	for (int count = 0; count < num_ports; count++) {
 		int decimal = 0;
@@ -303,10 +306,10 @@ void* create_fork(int id, int is_output[], int num_components) {
 
 	//Output ids
 	int *output_ids = malloc(num_ports * sizeof(int));
-		if (output_ids == NULL) {
-			printf("Failed to allocate memory");
-			return NULL;
-		}
+	if (output_ids == NULL) {
+		printf("Failed to allocate memory");
+		return NULL;
+	}
 
 	for (int count = 0; count < num_ports; count++) {
 		split = strtok(NULL, " ");
@@ -356,7 +359,7 @@ void* create_fork(int id, int is_output[], int num_components) {
 
 	printf("ID: %d\n", id);
 	printf("Number of output ports: %d\n", num_ports);
-	for(int count=0;count<num_ports;count++){
+	for (int count = 0; count < num_ports; count++) {
 		printf("Probability %d: %f\n", count, probabilities[count]);
 		printf("Output id %d: %d\n", count, output_ids[count]);
 	}
@@ -457,7 +460,7 @@ void* create_g_q(int id, int gen, int is_output[], int num_components) {
 	is_output[output_id] = 1;
 
 	printf("ID: %d\n", id);
-	if(gen){
+	if (gen) {
 		printf("Component type: G\n");
 	} else {
 		printf("Component type: Q\n");
