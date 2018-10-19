@@ -7,88 +7,91 @@
 
 typedef struct QElem QElem;
 struct QElem {
-  void* elem;
-  QElem* nextElem;
+	void* elem;
+	QElem* nextElem;
 };
 
 struct Queue {
-  QElem* first;
-  QElem* last;
+	QElem* first;
+	QElem* last;
 };
 
 int isEmptyQ(Queue* Q) {
-  if (Q->first == NULL && Q->last == NULL) {
-    return TRUE;
-  }
-  return FALSE;
+	if (Q->first == NULL && Q->last == NULL) {
+		return TRUE;
+	}
+	return FALSE;
 }
 
 void* viewHead(Queue* Q) {
-  return Q->first->elem;
+	return Q->first->elem;
 }
 
 QElem* mkQElem(void* E) {
-  QElem* new = malloc(sizeof(QElem));
-  if (new == NULL) {
-    return NULL;
-  }
+	QElem* new = malloc(sizeof(QElem));
+	if (new == NULL) {
+		return NULL;
+	}
 
-  new->elem = E;
-  new->nextElem = NULL;
-  return new;
+	new->elem = E;
+	new->nextElem = NULL;
+	return new;
 }
 
 Queue* mkQueue() {
-  Queue* Q = malloc(sizeof(Queue));
-  Q->first = NULL;
-  Q->last = NULL;
-  return Q;
+	Queue* Q = malloc(sizeof(Queue));
+	Q->first = NULL;
+	Q->last = NULL;
+	return Q;
 }
 
 void freeQueue(Queue* Q) {
-  QElem* head = Q->first;
-  QElem* tmp;
+	QElem* head = Q->first;
+	QElem* tmp;
 
-  while (head != NULL) {
-    tmp = head;
-    head = head->nextElem;
-    //    free(tmp->elem);
-    free(tmp);
-  }
-
-  free(Q);
+	while (head != NULL) {
+		tmp = head;
+		head = head->nextElem;
+		//    free(tmp->elem);
+		if (tmp != NULL) {
+			free(tmp);
+		}
+	}
+	if (Q != NULL) {
+		free(Q);
+	}
 }
 
 int enqueue(Queue* Q, void* E) {
-  QElem* new = mkQElem(E);
-  if (new == NULL) {
-    printf("Cannot enqueue new element");
-    return 1;
-  }
-  if (isEmptyQ(Q) == TRUE) {
-    Q->first = new;
-    Q->last = new;
-    return 0;
-  }
+	QElem* new = mkQElem(E);
+	if (new == NULL) {
+		printf("Cannot enqueue new element");
+		return 1;
+	}
+	if (isEmptyQ(Q) == TRUE) {
+		Q->first = new;
+		Q->last = new;
+		return 0;
+	}
 
-  (Q->last)->nextElem = new;
-  Q->last = new;
-  return 0;
+	(Q->last)->nextElem = new;
+	Q->last = new;
+	return 0;
 }
 
 void* dequeue(Queue* Q) {
-  if (isEmptyQ(Q) == TRUE) {
-    printf("Queue is empty\n");
-    return NULL;
-  }
-  QElem* temp = Q->first;
-  Q->first = Q->first->nextElem;
+	if (isEmptyQ(Q) == TRUE) {
+		printf("Queue is empty\n");
+		return NULL;
+	}
+	QElem* temp = Q->first;
+	Q->first = Q->first->nextElem;
 
-  if (Q->first == NULL) {
-    Q->last = NULL;
-    //printf("Q last is now NULL");
-  }
-  return temp->elem;
+	if (Q->first == NULL) {
+		Q->last = NULL;
+		//printf("Q last is now NULL");
+	}
+	return temp->elem;
 }
 
 /* void printQueue(Queue* Q) { */

@@ -7,9 +7,9 @@ typedef struct List List;
  * Implement a generic key-value linked list
  */
 struct List {
-  double listKey;   // key
-  void* listVal;   // pointer to value
-  List* cdr;   // pointer to next list
+	double listKey;   // key
+	void* listVal;   // pointer to value
+	List* cdr;   // pointer to next list
 };
 
 /*
