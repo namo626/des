@@ -9,7 +9,7 @@
  * Functions
  */
 void *read_file(FILE* ifp, int num_components);
-void *read_line(char* buffer, int num_components, int has_id[], int is_output[],
+int read_line(char* buffer, int num_components, int has_id[], int is_output[],
 		int is_generator[]);
 int get_id(char* buffer);
 char get_component_type(char* buffer);
@@ -107,6 +107,7 @@ int config(double time, char* configfile, char* outfile) {
  */
 void* read_file(FILE* ifp, int num_components) {
 	//Arrays for error checking
+	int has_exit = 0;
 	int has_id[num_components];
 	int is_output[num_components];
 	int is_generator[num_components];
@@ -120,7 +121,7 @@ void* read_file(FILE* ifp, int num_components) {
 	char *buffer = malloc(sizeof(char) * max_buf);
 	if (buffer == NULL) {
 		//Malloc failed
-		printf("Failed to allocate memory");
+		printf("Failed to allocate memory\n");
 		fclose(ifp);
 		return NULL;
 	}
@@ -136,7 +137,7 @@ void* read_file(FILE* ifp, int num_components) {
 				buffer = realloc(buffer, max_buf);
 				if (buffer == NULL) {
 					//Realloc failed
-					printf("Failed to allocate memory (reallocation)");
+					printf("Failed to allocate memory (reallocation)\n");
 					fclose(ifp);
 					return NULL;
 				}
@@ -148,13 +149,16 @@ void* read_file(FILE* ifp, int num_components) {
 		buffer[buf_length - 1] = '\0';
 
 		//Read line of buffer
-		if (read_line(buffer, num_components, has_id, is_output,
-				is_generator) == NULL) {
+		int read = read_line(buffer, num_components, has_id, is_output,
+				is_generator);
+		if (read == -1) {
 			//There was an error
 			if (buffer != NULL) {
 				free(buffer);
 			}
 			return NULL;
+		} else if(read == 1){
+			has_exit = 1;
 		}
 
 		//New line/buffer
@@ -163,17 +167,22 @@ void* read_file(FILE* ifp, int num_components) {
 	if (buffer != NULL) {
 		free(buffer);
 	}
+	if(has_exit == 0){
+		printf("ERROR: You must include an exit in the configuration file.\n");
+		return NULL;
+	}
 	return ((void*) 1);
 }
 
 /*
  * Reads a line, creates the component specified on that line
  */
-void *read_line(char* buffer, int num_components, int has_id[], int is_output[],
+int read_line(char* buffer, int num_components, int has_id[], int is_output[],
 		int is_generator[]) {
+	int is_exit = 0;
 	if (buffer[0] == '\0') {
 		//Empty line, skip
-		return ((void*) 1);
+		return is_exit;
 	}
 	char *split = strtok(buffer, " ");
 	int id;
@@ -185,16 +194,16 @@ void *read_line(char* buffer, int num_components, int has_id[], int is_output[],
 			//ID
 			id = get_id(split);
 			if (id == -1) {
-				return NULL;
+				return -1;
 			}
 			if (id >= num_components) {
 				printf("ERROR: The ID of one of the components is too large\n");
-				return NULL;
+				return -1;
 			}
 			if (has_id[id]) {
 				printf(
 						"ERROR: The configuration file contains two identical IDs\n");
-				return NULL;
+				return -1;
 			}
 			has_id[id] = 1;
 		}
@@ -202,7 +211,7 @@ void *read_line(char* buffer, int num_components, int has_id[], int is_output[],
 			//Component type
 			component_type = get_component_type(split);
 			if (component_type == '\0') {
-				return NULL;
+				return -1;
 			}
 
 		}
@@ -217,38 +226,39 @@ void *read_line(char* buffer, int num_components, int has_id[], int is_output[],
 	}
 	if (count != 2) {
 		printf("ERROR: Missing arguments to create component\n");
-		return NULL;
+		return -1;
 	}
 
 	switch (component_type) {
 	case 'E':
 		if (strtok(NULL, " ") != NULL) {
 			printf("ERROR: Exit component does not allow arguments\n");
-			return NULL;
+			return -1;
 		}
 		printf("ID: %d\n", id);
 		addExit(id);
 		printf("Created exit component\n\n");
+		is_exit = 1;
 		break;
 	case 'G':
 		if (create_g_q(id, 1, is_output, num_components) == NULL) {
-			return NULL;
+			return -1;
 		}
 		is_generator[id] = 1;
 		break;
 	case 'Q':
 		if (create_g_q(id, 0, is_output, num_components) == NULL) {
-			return NULL;
+			return -1;
 		}
 		break;
 	case 'F':
 		if (create_fork(id, is_output, num_components) == NULL) {
-			return NULL;
+			return -1;
 		}
 		break;
 	default:
 		printf("ERROR: Something went wrong\n");
-		return NULL;
+		return -1;
 		break;
 	}
 	//Check output IDs
@@ -256,11 +266,12 @@ void *read_line(char* buffer, int num_components, int has_id[], int is_output[],
 		if (is_output[i]) {
 			if (is_generator[i]) {
 				printf("ERROR: Output ID can't be the ID of a generator\n");
-				return NULL;
+				return -1;
 			}
 		}
 	}
-	return ((void*) 1);
+	printf("Is exit: %d\n", is_exit);
+	return is_exit;
 }
 
 /*
