@@ -1,0 +1,26 @@
+Stats for the whole network
+  No. of components in system: 5
+  No. of customers entered: 0
+  No. of customers exited: 0
+  Max total wait time among customers: 0.0
+  Min total wait time among customers: 0.0
+  Avg total wait time among customers: 0.0
+
+Stats for Station (id = 0)
+  Total number of instances of waiting in line: 0
+  Average line wait time: 0.0
+
+Stats for Station (id = 2)
+  Total number of instances of waiting in line: 0
+  Average line wait time: 0.0
+
+Stats for Station (id = 3)
+  Total number of instances of waiting in line: 0
+  Average line wait time: 0.0
+
+Stats of Exit (id = 4)
+  Number of customers exited: 0
+  Min time in the system: -1.0
+  Max time in the system: 0.0
+  Avg time in the system: 0.0
+

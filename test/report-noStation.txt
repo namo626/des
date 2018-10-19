@@ -1,0 +1,14 @@
+Stats for the whole network
+  No. of components in system: 4
+  No. of customers entered: 340
+  No. of customers exited: 340
+  Max total wait time among customers: 0.0
+  Min total wait time among customers: 0.0
+  Avg total wait time among customers: 0.0
+
+Stats of Exit (id = 3)
+  Number of customers exited: 340
+  Min time in the system: 0.0
+  Max time in the system: 0.0
+  Avg time in the system: 0.0
+

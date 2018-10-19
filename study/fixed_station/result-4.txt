@@ -1,0 +1,50 @@
+Stats for the whole network
+  No. of components in system: 14
+  No. of customers entered: 124
+  No. of customers exited: 120
+  Max total wait time among customers: 11.4
+  Min total wait time among customers: 0.0
+  Avg total wait time among customers: 2.1
+
+Stats for Station (id = 1)
+  Total number of instances of waiting in line: 7
+  Average line wait time: 0.2
+
+Stats for Station (id = 3)
+  Total number of instances of waiting in line: 2
+  Average line wait time: 7.1
+
+Stats for Station (id = 4)
+  Total number of instances of waiting in line: 3
+  Average line wait time: 2.1
+
+Stats for Station (id = 5)
+  Total number of instances of waiting in line: 12
+  Average line wait time: 4.3
+
+Stats for Station (id = 6)
+  Total number of instances of waiting in line: 14
+  Average line wait time: 3.5
+
+Stats for Station (id = 7)
+  Total number of instances of waiting in line: 7
+  Average line wait time: 2.3
+
+Stats for Station (id = 9)
+  Total number of instances of waiting in line: 20
+  Average line wait time: 1.0
+
+Stats for Station (id = 10)
+  Total number of instances of waiting in line: 17
+  Average line wait time: 1.2
+
+Stats for Station (id = 11)
+  Total number of instances of waiting in line: 50
+  Average line wait time: 1.7
+
+Stats of Exit (id = 13)
+  Number of customers exited: 120
+  Min time in the system: 0.8
+  Max time in the system: 26.6
+  Avg time in the system: 7.6
+
