@@ -270,7 +270,6 @@ int read_line(char* buffer, int num_components, int has_id[], int is_output[],
 			}
 		}
 	}
-	printf("Is exit: %d\n", is_exit);
 	return is_exit;
 }
 
